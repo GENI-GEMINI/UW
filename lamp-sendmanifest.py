@@ -160,8 +160,10 @@ def manifest_v2_to_unis(manifest, slice_id):
             unis_port = unis_dom.createElementNS(UNIS_NS, "port")
             unis_port.setAttribute('id', unis_id)
             
+            # Component ids are not unique for shared nodes, use full client_id instead.
+            iface_client_id = rsiface.getAttribute('client_id').lower()
             iface_component_id = rsiface.getAttribute('component_id').lower()
-            node_interfaces[iface_component_id] = node_virtual_id
+            node_interfaces[iface_client_id] = node_virtual_id
             parsed[unis_id] = unis_port
                         
             unis_port.appendChild(
@@ -280,9 +282,10 @@ def manifest_v2_to_unis(manifest, slice_id):
 
         for iface_ref in interface_refs:
             iface_ref_id = iface_ref.getAttribute('client_id').split(':')[-1].lower()
-            iface_ref_compid = iface_ref.getAttribute('component_id').lower()
+            # Component ids are not unique for shared nodes, use full client_id instead.
+            iface_ref_clientid = iface_ref.getAttribute('client_id').lower()
             port_id_ref = create_urn(domain=slice_id,
-                                     node=node_interfaces[iface_ref_compid],
+                                     node=node_interfaces[iface_ref_clientid],
                                      port=iface_ref_id)
 
             if port_id_ref not in parsed:
@@ -776,4 +779,3 @@ def clone_children(node_from, node_to, ignore_list=()):
 
 if __name__ == "__main__":
     sys.exit(main())
-
