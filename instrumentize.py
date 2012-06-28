@@ -322,11 +322,11 @@ for my_manager in managers_to_monitor:
         gemini_util.send_to_instools_portal(my_manager["GN_sliver_urn"],username,crypt_passwd,password,email_id,my_manager["urn"],my_manager["hrn"],SLICENAME,CERT_ISSUER,LOGFILE,keyfile,debug)
         gemini_util.vnc_passwd_create(my_manager["nodes_sliver_urn"],my_manager["GN_sliver_urn"],username,LOGFILE,keyfile,debug)
         gemini_util.drupal_account_create(my_manager["GN_sliver_urn"],username,password,email_id,dp_username,dp_passwd,LOGFILE,keyfile,debug)
-        gemini_util.initialize_Drupal_menu(my_manager["GN_sliver_urn"],username,SLICENAME,dp_username,dp_passwd,LOGFILE,keyfile,debug)
 
 	#Do all active measurement stuff
         gemini_util.install_Active_measurements(my_manager["nodes_sliver_urn"],my_manager["GN_sliver_urn"],username,USERURN,SLICEURN,my_manager["LAMPCERT"],LOGFILE,keyfile,debug)
 
+        gemini_util.initialize_Drupal_menu(my_manager["GN_sliver_urn"],username,SLICENAME,dp_username,dp_passwd,LOGFILE,keyfile,debug)
 	# Unlock the GN
 	(status,msg) = gemini_util.lock_unlock_MC(my_manager["GN_sliver_urn"],"unlock",username,LOGFILE,keyfile,debug)
 	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
