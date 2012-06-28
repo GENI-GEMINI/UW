@@ -484,12 +484,10 @@ def initialize_Drupal_menu( MC_sliver_urn, username,SLICENAME,dp_username,dp_pas
 	(MC,hostname_from_urn,port,auth_type,vid) =  host_info[MC_sliver_urn].split(" ")
 	ssh_options = getSSH_options(keyfile,port)
 	
-	#cmd = '/usr/bin/lynx -dump "http://'+hostname_from_urn+'/drupal/parseTopology.php?SLICENAME='+SLICENAME+'"'
-	cmd = '/usr/bin/wget -b --no-check-certificate -a /var/emulab/logs/INSTOOLS.log --user='+dp_username+' --password='+dp_passwd+' "http://'+hostname_from_urn+'/drupal/parseTopology.php?SLICENAME='+SLICENAME+'"'
+	cmd = '/usr/bin/wget -b --no-check-certificate -a /var/emulab/logs/INSTOOLS.log -O /tmp/instools_pt.log --user='+dp_username+' --password='+dp_passwd+' "http://'+hostname_from_urn+'/drupal/parseTopology.php?SLICENAME='+SLICENAME+'"'
 	msg = "Initializing Drupal Menu creation for this Topology"
 	write_to_log(LOGFILE,msg,printtoscreen,debug)
 	process = subprocess.Popen(ssh+ssh_options+username+'@'+MC+' \''+cmd+' \'', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
-#	process.wait()
 	write_to_processlog(process, LOGFILE)
 	
 	return
@@ -986,7 +984,7 @@ def	drupal_account_create(MC_sliver_urn,username,password,email_id,dp_username,d
 	(MC,hostname_from_urn,port,auth_type,vid) = host_info[MC_sliver_urn].split(" ")
 	ssh_options = getSSH_options(keyfile,port)
 	pre_cmd = 'sudo wget -P /var/www/html/drupal "'+INSTOOLS_repo_url+'scripts/createUser.php.txt";sudo mv /var/www/html/drupal/createUser.php.txt /var/www/html/drupal/createUser.php ;sudo chmod +x /var/www/html/drupal/createUser.php;sudo chgrp nobody /var/www/html/drupal/createUser.php;'
-	cmd = '/usr/bin/wget --no-check-certificate -a /var/emulab/logs/INSTOOLS.log --user='+dp_username+' --password='+dp_passwd+' "https://'+hostname_from_urn+'/drupal/createUser.php?uname='+username+'&pswd='+password+'&email='+email_id+'&debug=1";'
+	cmd = '/usr/bin/wget --no-check-certificate -a /var/emulab/logs/INSTOOLS.log -O /tmp/instools_createuser.log --user='+dp_username+' --password='+dp_passwd+' "https://'+hostname_from_urn+'/drupal/createUser.php?uname='+username+'&pswd='+password+'&email='+email_id+'&debug=1";'
 	post_cmd = 'sudo rm -rf /var/www/html/drupal/createUser.php;'
 
 	process = subprocess.Popen(ssh+ssh_options+username+'@'+MC+' \''+pre_cmd+cmd+post_cmd+'\'',shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
