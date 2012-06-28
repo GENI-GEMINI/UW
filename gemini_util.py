@@ -329,7 +329,7 @@ def precheckNodes(rspec_dom,version,cm_urn_to_look,username,keyfile,LOGFILE,debu
 				(out,err) = process.communicate()
 				ret_code = process.returncode
 				if (ret_code != 0):
-					msg =  hostname+"at port "+port+" (Node : "+vid+") is not responding\nInstrumentization will terminate. Please make sure your experiment is running"+"\n"+err
+					msg =  hostname+" at port "+port+" (Node : "+vid+") is not responding\nInstrumentization will terminate. Please make sure your experiment is running"+"\n"+err
 					return FALSE,GN_sliverurn,isGNVirtual,nodes_sliver_urns,msg
 				if (not isOSSupported(sliver_urn,FALSE, username, LOGFILE, keyfile,debug)):
 					msg = "The Operating System on the Node \""+vid+"\" is not compatible with GEMINI"
