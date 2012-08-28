@@ -93,34 +93,24 @@ def setupkeys ( nodes_sliver_urns , username, MC_sliver_urn,isVirtualMC, debug, 
 	global scp
 	global host_info
 		
+	f = tempfile.NamedTemporaryFile(delete=False)
+        my_mckeyfile = f.name
 	nodes_sliver_urn = nodes_sliver_urns.keys()
 	#This get the public key of the measurement node to put on other nodes in your experiement
 	msg = "Fetching Measurement controller Public key"
 	write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
 	(MC,hostname_from_urn,port,auth_type,vid) = host_info[MC_sliver_urn].split(" ")
 	ssh_options = getSSH_options(keyfile,port)
-	process = subprocess.Popen(scp+ssh_options+" -r "+username+"@"+MC+":"+MC_NODE_keypath+"/"+public_key+" "+LOCAL_tmppath+"/"+public_key+PID, shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
+	process = subprocess.Popen(scp+ssh_options+" -r "+username+"@"+MC+":"+MC_NODE_keypath+"/"+public_key+" "+my_mckeyfile, shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
 	process.wait()
 	write_to_processlog(process, LOGFILE)
 	
 
-	if (not isVirtualMC):
-		mc_ip = socket.gethostbyname(MC)
-	else:
-		cmd ="sudo nslookup "+hostname_from_urn+"|grep Address|tail -1"
-		cmd =""
-		process = process = subprocess.Popen(ssh+ssh_options+username+"@"+MC+' "'+cmd+' "', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
-		process.wait()
-		(out,err) = process.communicate()
-		ip = out.replace("Address:","")
-		mc_ip = ip.rstrip()
-#		write_to_processlog(process, LOGFILE)
-		
-	
+	mc_ip = socket.gethostbyname(MC)
 	msg = "MC IP = "+mc_ip+"\n"
 	write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
 
-	node_cmd ="sudo mv "+EXP_NODE_tmppath+"/"+public_key+PID+" "+public_key_dest+";cd "+EXP_NODE_tmppath+";sudo rm -rf INSTOOLS_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/INSTOOLS_SETUP.tgz;tar xzfv INSTOOLS_SETUP.tgz;sudo ./INSTOOLS_SETUP.sh Node INSTALL "+mc_ip
+	node_cmd ="sudo mv "+my_mckeyfile+" "+public_key_dest+";cd "+EXP_NODE_tmppath+";sudo rm -rf INSTOOLS_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/INSTOOLS_SETUP.tgz;tar xzfv INSTOOLS_SETUP.tgz;sudo ./INSTOOLS_SETUP.sh Node INSTALL "+mc_ip
 	
         # Put the measurement node public key into the other nodes by appending to the authorized keys file     
 	proclist = []
@@ -128,18 +118,18 @@ def setupkeys ( nodes_sliver_urns , username, MC_sliver_urn,isVirtualMC, debug, 
 #		if (nodes_sliver_urns[node_sliver_urn]["active"]["enable"] != 'yes'):
 #			continue
 
-	        p = multiprocessing.Process(target=NodeInstall,args=(host_info[node_sliver_urn],node_cmd,public_key,PID,LOGFILE,debug,keyfile,username,))
+	        p = multiprocessing.Process(target=NodeInstall,args=(host_info[node_sliver_urn],node_cmd,my_mckeyfile,LOGFILE,debug,keyfile,username,))
 		proclist.append(p)
 		p.start()                                                                                                                      
         
 	for i in proclist:
 		i.join()
 
-	os.remove(LOCAL_tmppath+"/"+public_key+PID)
+	os.remove(my_mckeyfile)
 	
 	return
 
-def NodeInstall(host_info,node_cmd,public_key,PID,LOGFILE,debug,keyfile,username):
+def NodeInstall(host_info,node_cmd,my_mckeyfile,LOGFILE,debug,keyfile,username):
 
 	LOCAL_tmppath = "/tmp"
 	global EXP_NODE_tmppath
@@ -154,7 +144,7 @@ def NodeInstall(host_info,node_cmd,public_key,PID,LOGFILE,debug,keyfile,username
 
 	msg = "Placing the Measurement controller's public key on Node:\""+vid+"\" to allow it to complete setup"
 	write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
-	process = subprocess.Popen(scp+ssh_options+" -qr "+LOCAL_tmppath+"/"+public_key+PID+" "+username+"@"+node+":"+EXP_NODE_tmppath, shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
+	process = subprocess.Popen(scp+ssh_options+" -qr "+my_mckeyfile+" "+username+"@"+node+":"+EXP_NODE_tmppath, shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
 	process.wait()
 	write_to_processlog(process, LOGFILE)
 	
@@ -356,9 +346,11 @@ def get_gservices_from_node(node):
 	my_services['active'] = {}
 	my_services['passive'] = {}
 	my_services['active']['install'] = {}
+	my_services['active']['enable'] = {}
+	my_services['passive']['install'] = {}
 	my_services['passive']['enable'] = {}
 	active = node.getElementsByTagName('gemini:active')
-	passive = node.getElementsByTagName('gemini:active')
+	passive = node.getElementsByTagName('gemini:passive')
 
 	if(len(active) > 0):
 		if (active[0].hasAttribute('install')):
@@ -433,6 +425,8 @@ def InstallGN(MC_sliver_urn, username, LOGFILE,keyfile,debug ):
 	msg = "Starting the Global Node Software Intallation..."
 	write_to_log(LOGFILE,msg,printtoscreen,debug)
 	process = subprocess.Popen(ssh+ssh_options+username+'@'+MC+' "'+cmd+'"', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
+	post_cmd = "sudo touch /var/emulab/boot/isGemini;"
+	process = subprocess.Popen(ssh+ssh_options+username+'@'+MC+' "'+post_cmd+'"', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
 #	process.wait()
 #	write_to_processlog(process, LOGFILE)
 	
@@ -442,7 +436,7 @@ def InstallGN(MC_sliver_urn, username, LOGFILE,keyfile,debug ):
 #
 # start data collection routines 
 #
-def startStatscollection(cmurn,cmhrn, sliceurn,userurn,manifest,MC_sliver_urn, username, LOGFILE,keyfile,debug ):
+def copy_manifest_to_MC(manifest,MC_sliver_urn, username, LOGFILE,keyfile,debug ):
 
 	global ssh
 	global scp
@@ -451,6 +445,7 @@ def startStatscollection(cmurn,cmhrn, sliceurn,userurn,manifest,MC_sliver_urn, u
 
 	f = tempfile.NamedTemporaryFile()
 	manifest_file = f.name
+	manifest.replace("<emulab:vnode", "<rs:vnode")
 	f.write(manifest)
 	f.flush()
 	
@@ -463,14 +458,32 @@ def startStatscollection(cmurn,cmhrn, sliceurn,userurn,manifest,MC_sliver_urn, u
 	process.wait()
 	write_to_processlog(process, LOGFILE)
 	
-	cmd = 'chmod +r '+topology_file_on_mc+';sudo '+measure_scripts_path+'/initiate_stat_collection_without_credentials.sh '+userurn+' '+cmurn+' '+cmhrn+' '+sliceurn
+	cmd = 'chmod +r '+topology_file_on_mc+';'
+	process = subprocess.Popen(ssh+ssh_options+username+'@'+MC+' "'+cmd+'"', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
+	process.wait()
+	write_to_processlog(process, LOGFILE)
+	
+	f.close()
+	return
+#
+# start data collection routines 
+#
+def startStatscollection(cmurn,cmhrn, sliceurn,userurn,MC_sliver_urn, username, LOGFILE,keyfile,debug ):
+
+	global ssh
+	global scp
+	global host_info
+
+	(MC,hostname_from_urn,port,auth_type,vid) =  host_info[MC_sliver_urn].split(" ")
+	ssh_options = getSSH_options(keyfile,port)
+	
+	cmd = 'sudo '+measure_scripts_path+'/initiate_stat_collection_without_credentials.sh '+userurn+' '+cmurn+' '+cmhrn+' '+sliceurn
 	msg = "Starting the Data collection routines on the Measurement controller"
 	write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
 	process = subprocess.Popen(ssh+ssh_options+username+'@'+MC+' "'+cmd+'"', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
 	process.wait()
 	write_to_processlog(process, LOGFILE)
 	
-	f.close()
 	return
 
 #
@@ -646,7 +659,8 @@ def send_to_instools_portal(MC_sliver_urn,username,password,op,emailid,cmurn,cmh
 	
 
 	precmd = 'sudo  mv '+adata+' '+ARCHIVE_CMD_FILE+';sudo chmod 555 '+ARCHIVE_CMD_FILE+';'
-	cmd = '/usr/bin/lynx -dump "https://portal.uky.emulab.net/getTopinfo.php?VM_MC='+hostname_from_urn+'&MC='+MC+'&sshd_port='+port+'&username='+username+'&password='+password+'&HRN='+cmhrn+'&CMURN='+urllib.quote_plus(cmurn)+'&slicename='+slicename+'&cert_issuer='+cert_issuer+'&urn='+urllib.quote_plus(MC_sliver_urn)+'&op='+op+'";'
+	#cmd = '/usr/bin/lynx -dump "https://geminiportal.netlab.uky.edu/getTopinfo.php?VM_MC='+hostname_from_urn+'&MC='+MC+'&sshd_port='+port+'&username='+username+'&password='+password+'&HRN='+cmhrn+'&CMURN='+urllib.quote_plus(cmurn)+'&slicename='+slicename+'&cert_issuer='+cert_issuer+'&urn='+urllib.quote_plus(MC_sliver_urn)+'&op='+op+'";'
+	cmd = '/usr/bin/wget --no-check-certificate -a /var/emulab/logs/INSTOOLS.log -O /tmp/gm-portal.log "https://geminiportal.netlab.uky.edu/getTopinfo.php?VM_MC='+hostname_from_urn+'&MC='+MC+'&sshd_port='+port+'&username='+username+'&password='+password+'&HRN='+cmhrn+'&CMURN='+urllib.quote_plus(cmurn)+'&slicename='+slicename+'&cert_issuer='+cert_issuer+'&urn='+urllib.quote_plus(MC_sliver_urn)+'&op='+op+'";'
 	msg = "Sending this MC's info to INSTOOLS portal site"
 	write_to_log(LOGFILE,msg,printtoscreen,debug)
 	process = subprocess.Popen(ssh+ssh_options+username+'@'+MC+' \''+precmd+cmd+'\'', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
@@ -1262,6 +1276,8 @@ def getHostnameFromExt(node,urn,rspec_version):
 		hostname = breaks.pop()
 	elif(rspec_version >= 2):
 		vnode_ext = node.getElementsByTagName('rs:vnode')
+		if not (vnode_ext):
+			vnode_ext = node.getElementsByTagName('emulab:vnode')
 		hostname = vnode_ext.item(0).getAttribute('name')
 		breaks.pop()
 	else:
@@ -1401,7 +1417,8 @@ def install_Active_measurements(nodes_sliver_urns,GN_sliver_urn,username,USERURN
 	
         # Put the measurement node public key into the other nodes by appending to the authorized keys file     
 	for node_sliver_urn in nodes_sliver_urn:
-		if (nodes_sliver_urns[node_sliver_urn]["active"]["enable"] != 'yes'):
+		mygservice = nodes_sliver_urns[node_sliver_urn]
+		if (mygservice["active"]["enable"] != 'yes'):
 			continue
 
 		NODE_TYPE = "MP"

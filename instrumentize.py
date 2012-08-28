@@ -248,7 +248,8 @@ for my_manager in my_managers:
 		msg = "ERROR @ {"+my_manager["am_uri"]+"} :: "+msg+"\nWill terminate now.\n,"
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 		sys.exit(1)
-	# Fetching LAMP Cert
+
+	# Fetching LAMP Cert 
 	msg = "Asking for my lamp certificate\n"
 	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 
@@ -269,9 +270,9 @@ for my_manager in my_managers:
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.dontprinttoscreen,debug)
 		my_manager["LAMPCERT"] = LAMPCERT
 	pass
+
 	#Sending Manifest to UNIS
 	(state,msg) = gemini_util.LAMP_sendmanifest(SLICEURN,my_manager["manifest"],my_manager["LAMPCERT"],SLICECRED_FOR_LAMP,LOGFILE,debug)
-#	(state,msg) = gemini_util.LAMP_sendmanifest(SLICEURN,my_manager["manifest"],"",SLICECRED_FOR_LAMP,LOGFILE,debug)
 	if( not state):
 		msg = msg +"\nFailed to send manifest to UNIS\n"
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
@@ -306,12 +307,13 @@ for my_manager in managers_to_monitor:
 	else:
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 
-
+	annotated_manifest = gemini_util.addNodeLocation(my_manager["manifest_dom"],my_manager["manifest_version"],my_manager["urn"],my_manager["node_location_array"],LOGFILE,debug)
+        gemini_util.copy_manifest_to_MC(annotated_manifest,my_manager["GN_sliver_urn"],username,LOGFILE,keyfile,debug )
+        gemini_util.send_to_instools_portal(my_manager["GN_sliver_urn"],username,crypt_passwd,password,email_id,my_manager["urn"],my_manager["hrn"],SLICENAME,CERT_ISSUER,LOGFILE,keyfile,debug)
         gemini_util.update_Drupaladmin_acctinfo(my_manager["GN_sliver_urn"],username,dp_username,dp_passwd,LOGFILE,keyfile,debug)
         rval = gemini_util.setupkeys (my_manager["nodes_sliver_urn"],username,my_manager["GN_sliver_urn"],my_manager["GN_isVirtual"], debug, LOGFILE,keyfile)
-	annotated_manifest = gemini_util.addNodeLocation(my_manager["manifest_dom"],my_manager["manifest_version"],my_manager["urn"],my_manager["node_location_array"],LOGFILE,debug)
 
-        gemini_util.startStatscollection(my_manager["urn"],my_manager["hrn"],SLICEURN,USERURN,annotated_manifest,my_manager["GN_sliver_urn"],username,LOGFILE,keyfile,debug )
+        gemini_util.startStatscollection(my_manager["urn"],my_manager["hrn"],SLICEURN,USERURN,my_manager["GN_sliver_urn"],username,LOGFILE,keyfile,debug )
 
         gemini_util.do_netflow_stuff(my_manager["GN_sliver_urn"],'init',username,LOGFILE,keyfile,debug)
 #	gemini_util.do_netflow_stuff(my_manager["GN_sliver_urn"],'start',username,LOGFILE,keyfile,debug)
@@ -319,7 +321,6 @@ for my_manager in managers_to_monitor:
 
 
         gemini_util.send_polldata_file(my_manager["GN_sliver_urn"],username,crypt_passwd,LOGFILE,keyfile,debug)
-        gemini_util.send_to_instools_portal(my_manager["GN_sliver_urn"],username,crypt_passwd,password,email_id,my_manager["urn"],my_manager["hrn"],SLICENAME,CERT_ISSUER,LOGFILE,keyfile,debug)
         gemini_util.vnc_passwd_create(my_manager["nodes_sliver_urn"],my_manager["GN_sliver_urn"],username,LOGFILE,keyfile,debug)
         gemini_util.drupal_account_create(my_manager["GN_sliver_urn"],username,password,email_id,dp_username,dp_passwd,LOGFILE,keyfile,debug)
 

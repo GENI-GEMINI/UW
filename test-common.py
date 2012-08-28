@@ -279,7 +279,7 @@ def do_method(module, method, params, URI=None, quiet=False, version=None,
                 continue
             elif response.status != 200:
                 if not quiet:
-                    print >> sys.stderr, response.status + " " + response.reason
+                    print >> sys.stderr, str(response.status) + " " + response.reason
                 return (-1,None)
             response = xmlrpclib.loads( response.read() )[ 0 ][ 0 ]
             break
@@ -344,7 +344,7 @@ def resolve_slice( name, selfcredential ):
         params["hrn"]       = name
         pass
     
-    count = 2
+    count = 20
     while True:
         rval,response = do_method("sa", "Resolve", params)
         if rval:
@@ -381,7 +381,7 @@ def get_slice_credential( slice, selfcredential ):
         params["uuid"]      = slice["uuid"]
         pass
 
-    count = 2
+    count = 20
     while True:
         rval,response = do_method("sa", "GetCredential", params)
         if rval:
