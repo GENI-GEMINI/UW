@@ -108,6 +108,7 @@ def manifest_v2_to_unis(manifest, slice_id):
     rsnodes = rspec.getElementsByTagNameNS(RSPEC_NS, "node")
 
     for rsnode in rsnodes:
+        n_ns = []
         node_virtual_id = rsnode.getAttribute('client_id').lower()
         unis_id = create_urn(domain=slice_id, node=node_virtual_id)
         if unis_id in parsed:
@@ -144,6 +145,8 @@ def manifest_v2_to_unis(manifest, slice_id):
             if attr.prefix and attr.prefix != 'xmlns':
                 unis_node_pgeni_properties.setAttribute("xmlns:%s" % attr.prefix, 
                                                         attr.namespaceURI)
+            elif attr.prefix == 'xmlns':
+                n_ns.append(attr)
 
         # Now we process the child elements that we recognize
         rsinterfaces = rsnode.getElementsByTagNameNS(RSPEC_NS, "interface")
@@ -189,6 +192,11 @@ def manifest_v2_to_unis(manifest, slice_id):
 
             unis_port_pgeni_properties = unis_dom.createElementNS(PROTOGENI_NS, "portProperties")
             unis_port_properties_bag.appendChild(unis_port_pgeni_properties)
+
+            # add in the namespaces saved from the node attributes
+            # pgeni properyBags have different scope than original node in RSpec
+            for ns in n_ns:
+                unis_port_pgeni_properties.setAttribute(ns.name, ns.value)
 
             INTERFACE_IGNORED_ATTRS = ('client_id', 'mac_address')
             for i in range(rsiface.attributes.length):
@@ -463,7 +471,7 @@ def manifest_to_unis(manifest, slice_id):
         
         unis_link_pgeni_properties = unis_dom.createElementNS(PROTOGENI_NS, "linkProperties")
         unis_link_properties_bag.appendChild(unis_link_pgeni_properties)
-        
+
         LINK_IGNORED_ATTRS = ('virtual_id',)
         for i in range(rslink.attributes.length):
             attr = rslink.attributes.item(i)
