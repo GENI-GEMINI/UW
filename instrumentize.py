@@ -175,7 +175,7 @@ for my_manager in my_managers:
 	#
 	params = [SLICEURN, [slicecred]]
 	try:
-		response = do_method("am", "SliverStatus", params,URI=AM_URI,response_handler=geni_am_response_handler)
+		response = do_method("am", "SliverStatus", params,URI=AM_URI,version="1.0",response_handler=geni_am_response_handler)
 		if(response["geni_status"] != "ready"):
 			msg = "Your Slivers at "+AM_URI+" is not ready.\nPlease wait for it to be ready and then try to instrument your slice...."
 			gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
@@ -190,7 +190,7 @@ for my_manager in my_managers:
 	options["geni_slice_urn"] = SLICEURN
 	params = [[slicecred], options]
 	try:
-		response = do_method("am", "ListResources", params,URI=AM_URI,response_handler=geni_am_response_handler)
+		response = do_method("am", "ListResources", params,URI=AM_URI,version="1.0",response_handler=geni_am_response_handler)
 		my_manager["manifest"] = response
 		my_manager["manifest_dom"] = parseString(my_manager["manifest"])
 		my_manager["manifest_version"] = gemini_util.getRspecVersion(my_manager["manifest_dom"])
@@ -204,7 +204,7 @@ for my_manager in my_managers:
 	options = {}
 	params = [[mycredential], options]
 	try:
-		response = do_method("am", "ListResources", params,URI=AM_URI,response_handler=geni_am_response_handler)
+		response = do_method("am", "ListResources", params,URI=AM_URI,version="1.0",response_handler=geni_am_response_handler)
 		AM_Resources = response
 		Resources_dom = parseString(AM_Resources)
 		#get Rspec Version
