@@ -1,0 +1,180 @@
+<rspec type="request" generated_by="Flack" generated="2012-10-10T16:34:53Z" xsi:schemaLocation="http://www.geni.net/resources/rspec/3 http://www.geni.net/resources/rspec/3/request.xsd " xmlns:flack="http://www.protogeni.net/resources/rspec/ext/flack/1" xmlns:client="http://www.protogeni.net/resources/rspec/ext/client/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gemini="http://geni.net/resources/rspec/ext/gemini/1" xmlns="http://www.geni.net/resources/rspec/3">
+  <node client_id="VM-1" component_manager_id="urn:publicid:IDN+uky.emulab.net+authority+cm" exclusive="false" xmlns:rs="http://www.protogeni.net/resources/rspec/ext/emulab/1">
+    <rs:vnode name="pcvm62-6"/>
+    <sliver_type name="emulab-openvz"/>
+    <interface client_id="VM-1:if0">
+      <ip address="10.128.2.2" netmask="" type="ipv4"/>
+      <flack:interface_info addressUnset="false"/>
+    </interface>
+    <interface client_id="VM-1:if1">
+      <ip address="10.128.3.2" netmask="" type="ipv4"/>
+      <flack:interface_info addressUnset="false"/>
+    </interface>
+    <interface client_id="VM-1:if2">
+      <ip address="10.128.4.1" netmask="" type="ipv4"/>
+      <flack:interface_info addressUnset="false"/>
+    </interface>
+    <gemini:node type="mp_node">
+      <gemini:services>
+	<gemini:active install="yes" enable="yes"/>
+	<gemini:passive install="yes" enable="yes"/>
+      </gemini:services>
+    </gemini:node>
+    <flack:node_info x="91" y="183" unbound="true"/>
+  </node>
+  <node client_id="VM-2" component_manager_id="urn:publicid:IDN+uky.emulab.net+authority+cm" exclusive="false" xmlns:rs="http://www.protogeni.net/resources/rspec/ext/emulab/1">
+    <rs:vnode name="pcvm62-7"/>
+    <sliver_type name="emulab-openvz"/>
+    <interface client_id="VM-2:if0">
+      <ip address="10.128.1.1" netmask="" type="ipv4"/>
+      <flack:interface_info addressUnset="false"/>
+    </interface>
+    <interface client_id="VM-2:if1">
+      <ip address="10.128.4.2" netmask="" type="ipv4"/>
+      <flack:interface_info addressUnset="false"/>
+    </interface>
+    <interface client_id="VM-2:if2">
+      <ip address="10.128.6.2" netmask="" type="ipv4"/>
+      <flack:interface_info addressUnset="false"/>
+    </interface>
+    <gemini:node type="mp_node">
+      <gemini:services>
+	<gemini:active install="yes" enable="yes"/>
+	<gemini:passive install="yes" enable="yes"/>
+      </gemini:services>
+    </gemini:node>
+    <flack:node_info x="637" y="208" unbound="true"/>
+  </node>
+  <node client_id="VM-3" component_manager_id="urn:publicid:IDN+uky.emulab.net+authority+cm" exclusive="false" xmlns:rs="http://www.protogeni.net/resources/rspec/ext/emulab/1">
+    <rs:vnode name="pcvm62-8"/>
+    <sliver_type name="emulab-openvz"/>
+    <interface client_id="VM-3:if0">
+      <ip address="10.128.3.1" netmask="" type="ipv4"/>
+      <flack:interface_info addressUnset="false"/>
+    </interface>
+    <interface client_id="VM-3:if1">
+      <ip address="10.128.5.1" netmask="" type="ipv4"/>
+      <flack:interface_info addressUnset="false"/>
+    </interface>
+    <interface client_id="VM-3:if2">
+      <ip address="10.128.6.1" netmask="" type="ipv4"/>
+      <flack:interface_info addressUnset="false"/>
+    </interface>
+    <gemini:node type="mp_node">
+      <gemini:services>
+	<gemini:active install="yes" enable="yes"/>
+	<gemini:passive install="yes" enable="yes"/>
+      </gemini:services>
+    </gemini:node>
+    <flack:node_info x="384" y="419" unbound="true"/>
+  </node>
+  <node client_id="VM-4" component_manager_id="urn:publicid:IDN+uky.emulab.net+authority+cm" exclusive="false" xmlns:rs="http://www.protogeni.net/resources/rspec/ext/emulab/1">
+    <rs:vnode name="pcvm62-9"/>
+    <sliver_type name="emulab-openvz"/>
+    <interface client_id="VM-4:if0">
+      <ip address="10.128.1.2" netmask="" type="ipv4"/>
+      <flack:interface_info addressUnset="false"/>
+    </interface>
+    <interface client_id="VM-4:if1">
+      <ip address="10.128.2.1" netmask="" type="ipv4"/>
+      <flack:interface_info addressUnset="false"/>
+    </interface>
+    <interface client_id="VM-4:if2">
+      <ip address="10.128.5.2" netmask="" type="ipv4"/>
+      <flack:interface_info addressUnset="false"/>
+    </interface>
+    <gemini:node type="mp_node">
+      <gemini:services>
+	<gemini:active install="yes" enable="yes"/>
+	<gemini:passive install="yes" enable="yes"/>
+      </gemini:services>
+    </gemini:node>
+    <flack:node_info x="650" y="417" unbound="true"/>
+  </node>
+  <node client_id="GN" component_manager_id="urn:publicid:IDN+uky.emulab.net+authority+cm" MC="1" mc_type="pc" exclusive="false" xmlns:emulab="http://www.protogeni.net/resources/rspec/ext/emulab/1">
+    <emulab:routable_control_ip xmlns="http://www.protogeni.net/resources/rspec/ext/emulab/1"/>
+    <emulab:vnode name="pcvm62-10" xmlns="http://www.protogeni.net/resources/rspec/ext/emulab/1"/>
+    <sliver_type name="emulab-openvz"/>
+    <!--
+	<sliver_type name="emulab-openvz">
+	<disk_image name="urn:publicid:IDN+uky.emulab.net+image+emulab-ops//FC15-INSTOOLS-GUEST"/>
+	</sliver_type>
+	<services>
+	<execute command="sudo /tmp/INSTOOLS_SETUP.sh MC INSTALL" shell="sh"/>
+	<install install_path="/usr/testbed/bin/measure-scripts" url="http://www.uky.emulab.net/INSTOOLS/3.4/tarballs/INSTALL_DEFS.tgz"/>
+	<install install_path="/" url="http://www.uky.emulab.net/INSTOOLS/3.4/tarballs/sudoers.tgz"/>
+	<install install_path="/tmp" url="http://www.uky.emulab.net/INSTOOLS/3.4/tarballs/INSTOOLS_SETUP.tgz"/>
+	</services>
+    -->
+    <gemini:node type="global_node">
+      <gemini:monitor_urn name="urn:publicid:IDN+uky.emulab.net+authority+cm">
+    </gemini:monitor_urn></gemini:node>
+    <flack:node_info x="327" y="481" unbound="true"/>
+  </node>
+  <link client_id="lan0">
+    <flack:link_info x="-1" y="-1" unboundVlantag="true" xmlns="http://www.protogeni.net/resources/rspec/ext/flack/1"/>
+    <flack:link_info x="-1" y="-1" unboundVlantag="true" xmlns="http://www.protogeni.net/resources/rspec/ext/flack/1"/>
+    <component_manager name="urn:publicid:IDN+uky.emulab.net+authority+cm"/>
+    <interface_ref client_id="VM-2:if0"/>
+    <interface_ref client_id="VM-4:if0"/>
+    <property source_id="VM-2:if0" dest_id="VM-4:if0"/>
+    <property source_id="VM-4:if0" dest_id="VM-2:if0"/>
+    <link_type name="lan"/>
+    <flack:link_info x="-1" y="-1" unboundVlantag="true"/>
+  </link>
+  <link client_id="lan1">
+    <flack:link_info x="-1" y="-1" unboundVlantag="true" xmlns="http://www.protogeni.net/resources/rspec/ext/flack/1"/>
+    <flack:link_info x="-1" y="-1" unboundVlantag="true" xmlns="http://www.protogeni.net/resources/rspec/ext/flack/1"/>
+    <component_manager name="urn:publicid:IDN+uky.emulab.net+authority+cm"/>
+    <interface_ref client_id="VM-4:if1"/>
+    <interface_ref client_id="VM-1:if0"/>
+    <property source_id="VM-4:if1" dest_id="VM-1:if0"/>
+    <property source_id="VM-1:if0" dest_id="VM-4:if1"/>
+    <link_type name="lan"/>
+    <flack:link_info x="-1" y="-1" unboundVlantag="true"/>
+  </link>
+  <link client_id="lan2">
+    <flack:link_info x="-1" y="-1" unboundVlantag="true" xmlns="http://www.protogeni.net/resources/rspec/ext/flack/1"/>
+    <flack:link_info x="-1" y="-1" unboundVlantag="true" xmlns="http://www.protogeni.net/resources/rspec/ext/flack/1"/>
+    <component_manager name="urn:publicid:IDN+uky.emulab.net+authority+cm"/>
+    <interface_ref client_id="VM-3:if0"/>
+    <interface_ref client_id="VM-1:if1"/>
+    <property source_id="VM-3:if0" dest_id="VM-1:if1"/>
+    <property source_id="VM-1:if1" dest_id="VM-3:if0"/>
+    <link_type name="lan"/>
+    <flack:link_info x="-1" y="-1" unboundVlantag="true"/>
+  </link>
+  <link client_id="lan3">
+    <flack:link_info x="-1" y="-1" unboundVlantag="true" xmlns="http://www.protogeni.net/resources/rspec/ext/flack/1"/>
+    <flack:link_info x="-1" y="-1" unboundVlantag="true" xmlns="http://www.protogeni.net/resources/rspec/ext/flack/1"/>
+    <component_manager name="urn:publicid:IDN+uky.emulab.net+authority+cm"/>
+    <interface_ref client_id="VM-1:if2"/>
+    <interface_ref client_id="VM-2:if1"/>
+    <property source_id="VM-1:if2" dest_id="VM-2:if1"/>
+    <property source_id="VM-2:if1" dest_id="VM-1:if2"/>
+    <link_type name="lan"/>
+    <flack:link_info x="-1" y="-1" unboundVlantag="true"/>
+  </link>
+  <link client_id="lan4">
+    <flack:link_info x="-1" y="-1" unboundVlantag="true" xmlns="http://www.protogeni.net/resources/rspec/ext/flack/1"/>
+    <flack:link_info x="-1" y="-1" unboundVlantag="true" xmlns="http://www.protogeni.net/resources/rspec/ext/flack/1"/>
+    <component_manager name="urn:publicid:IDN+uky.emulab.net+authority+cm"/>
+    <interface_ref client_id="VM-3:if1"/>
+    <interface_ref client_id="VM-4:if2"/>
+    <property source_id="VM-3:if1" dest_id="VM-4:if2"/>
+    <property source_id="VM-4:if2" dest_id="VM-3:if1"/>
+    <link_type name="lan"/>
+    <flack:link_info x="-1" y="-1" unboundVlantag="true"/>
+  </link>
+  <link client_id="lan5">
+    <flack:link_info x="-1" y="-1" unboundVlantag="true" xmlns="http://www.protogeni.net/resources/rspec/ext/flack/1"/>
+    <flack:link_info x="-1" y="-1" unboundVlantag="true" xmlns="http://www.protogeni.net/resources/rspec/ext/flack/1"/>
+    <component_manager name="urn:publicid:IDN+uky.emulab.net+authority+cm"/>
+    <interface_ref client_id="VM-3:if2"/>
+    <interface_ref client_id="VM-2:if2"/>
+    <property source_id="VM-3:if2" dest_id="VM-2:if2"/>
+    <property source_id="VM-2:if2" dest_id="VM-3:if2"/>
+    <link_type name="lan"/>
+    <flack:link_info x="-1" y="-1" unboundVlantag="true"/>
+  </link>
+</rspec>
