@@ -1408,9 +1408,12 @@ def install_Active_measurements(nodes_sliver_urns,GN_sliver_urn,username,USERURN
 	proclist = []
 	#sudo install -D -g geniuser -o root -m 440 /tmp/lampcert.pem  /usr/local/etc/protogeni/ssl/
 
+        #Get the GN hostname for the active install scripts
+        (GNHOST,hostname_from_urn,port,auth_type,vid)=host_info(GN_sliver_urn)
+
 	#Install software on GN Node regardless
 	NODE_TYPE = "GN"
-	cmd = "cd "+EXP_NODE_tmppath+";sudo rm -rf ACTIVE_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/ACTIVE_SETUP.tgz;tar xzf ACTIVE_SETUP.tgz;sudo ./ACTIVE_SETUP.sh "+NODE_TYPE+" INSTALL "+SLICEURN+" "+USERURN
+	cmd = "cd "+EXP_NODE_tmppath+";sudo rm -rf ACTIVE_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/ACTIVE_SETUP.tgz;tar xzf ACTIVE_SETUP.tgz;sudo ./ACTIVE_SETUP.sh "+NODE_TYPE+" INSTALL "+SLICEURN+" "+USERURN+" "+GNHOST 
 	p = multiprocessing.Process(target=ActiveInstall,args=(host_info[GN_sliver_urn],cmd,cert_file,LOGFILE,debug,keyfile,username,))
 	proclist.append(p)
 	p.start()                                                                                                                      
@@ -1422,7 +1425,7 @@ def install_Active_measurements(nodes_sliver_urns,GN_sliver_urn,username,USERURN
 			continue
 
 		NODE_TYPE = "MP"
-		cmd = "cd "+EXP_NODE_tmppath+";sudo rm -rf ACTIVE_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/ACTIVE_SETUP.tgz;tar xzf ACTIVE_SETUP.tgz;sudo ./ACTIVE_SETUP.sh "+NODE_TYPE+" INSTALL "+SLICEURN+" "+USERURN
+		cmd = "cd "+EXP_NODE_tmppath+";sudo rm -rf ACTIVE_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/ACTIVE_SETUP.tgz;tar xzf ACTIVE_SETUP.tgz;sudo ./ACTIVE_SETUP.sh "+NODE_TYPE+" INSTALL "+SLICEURN+" "+USERURN+" "+GNHOST
 		#Install software on MP Nodes
 	        p = multiprocessing.Process(target=ActiveInstall,args=(host_info[node_sliver_urn],cmd,cert_file,LOGFILE,debug,keyfile,username,))
 		proclist.append(p)
@@ -1434,7 +1437,6 @@ def install_Active_measurements(nodes_sliver_urns,GN_sliver_urn,username,USERURN
 	lpc.close
 #	os.remove(cert_file)
 	return state
-
 
 def ActiveInstall(host_info,node_cmd,cert_file,LOGFILE,debug,keyfile,username):
 
