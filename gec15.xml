@@ -20,6 +20,9 @@
 	<gemini:passive install="yes" enable="yes"/>
       </gemini:services>
     </gemini:node>
+    <execute command="sudo /tmp/installer/installer.sh" shell="sh"/>
+    <install install_path="/tmp" url="http://www.uky.emulab.net/INSTOOLS/3.5/tarballs/installer.tgz"/>
+    <install install_path="/" url="http://www.uky.emulab.net/INSTOOLS/3.5/tarballs/sudoers.tgz"/> 
     <flack:node_info x="91" y="183" unbound="true"/>
   </node>
   <node client_id="VM-2" component_manager_id="urn:publicid:IDN+uky.emulab.net+authority+cm" exclusive="false" xmlns:rs="http://www.protogeni.net/resources/rspec/ext/emulab/1">
@@ -43,6 +46,9 @@
 	<gemini:passive install="yes" enable="yes"/>
       </gemini:services>
     </gemini:node>
+    <execute command="sudo /tmp/installer/installer.sh" shell="sh"/>
+    <install install_path="/tmp" url="http://www.uky.emulab.net/INSTOOLS/3.5/tarballs/installer.tgz"/>
+    <install install_path="/" url="http://www.uky.emulab.net/INSTOOLS/3.5/tarballs/sudoers.tgz"/> 
     <flack:node_info x="637" y="208" unbound="true"/>
   </node>
   <node client_id="VM-3" component_manager_id="urn:publicid:IDN+uky.emulab.net+authority+cm" exclusive="false" xmlns:rs="http://www.protogeni.net/resources/rspec/ext/emulab/1">
@@ -66,6 +72,9 @@
 	<gemini:passive install="yes" enable="yes"/>
       </gemini:services>
     </gemini:node>
+    <execute command="sudo /tmp/installer/installer.sh" shell="sh"/>
+    <install install_path="/tmp" url="http://www.uky.emulab.net/INSTOOLS/3.5/tarballs/installer.tgz"/>
+    <install install_path="/" url="http://www.uky.emulab.net/INSTOOLS/3.5/tarballs/sudoers.tgz"/> 
     <flack:node_info x="384" y="419" unbound="true"/>
   </node>
   <node client_id="VM-4" component_manager_id="urn:publicid:IDN+uky.emulab.net+authority+cm" exclusive="false" xmlns:rs="http://www.protogeni.net/resources/rspec/ext/emulab/1">
@@ -89,26 +98,21 @@
 	<gemini:passive install="yes" enable="yes"/>
       </gemini:services>
     </gemini:node>
+    <execute command="sudo /tmp/installer/installer.sh" shell="sh"/>
+    <install install_path="/tmp" url="http://www.uky.emulab.net/INSTOOLS/3.5/tarballs/installer.tgz"/>
+    <install install_path="/" url="http://www.uky.emulab.net/INSTOOLS/3.5/tarballs/sudoers.tgz"/> 
     <flack:node_info x="650" y="417" unbound="true"/>
   </node>
   <node client_id="GN" component_manager_id="urn:publicid:IDN+uky.emulab.net+authority+cm" MC="1" mc_type="pc" exclusive="false" xmlns:emulab="http://www.protogeni.net/resources/rspec/ext/emulab/1">
     <emulab:routable_control_ip xmlns="http://www.protogeni.net/resources/rspec/ext/emulab/1"/>
     <emulab:vnode name="pcvm62-10" xmlns="http://www.protogeni.net/resources/rspec/ext/emulab/1"/>
     <sliver_type name="emulab-openvz"/>
-    <!--
-	<sliver_type name="emulab-openvz">
-	<disk_image name="urn:publicid:IDN+uky.emulab.net+image+emulab-ops//FC15-INSTOOLS-GUEST"/>
-	</sliver_type>
-	<services>
-	<execute command="sudo /tmp/INSTOOLS_SETUP.sh MC INSTALL" shell="sh"/>
-	<install install_path="/usr/testbed/bin/measure-scripts" url="http://www.uky.emulab.net/INSTOOLS/3.4/tarballs/INSTALL_DEFS.tgz"/>
-	<install install_path="/" url="http://www.uky.emulab.net/INSTOOLS/3.4/tarballs/sudoers.tgz"/>
-	<install install_path="/tmp" url="http://www.uky.emulab.net/INSTOOLS/3.4/tarballs/INSTOOLS_SETUP.tgz"/>
-	</services>
-    -->
     <gemini:node type="global_node">
       <gemini:monitor_urn name="urn:publicid:IDN+uky.emulab.net+authority+cm">
     </gemini:monitor_urn></gemini:node>
+    <execute command="sudo /tmp/installer/installer.sh MC" shell="sh"/>
+    <install install_path="/tmp" url="http://www.uky.emulab.net/INSTOOLS/3.5/tarballs/installer.tgz"/>
+    <install install_path="/" url="http://www.uky.emulab.net/INSTOOLS/3.5/tarballs/sudoers.tgz"/> 
     <flack:node_info x="327" y="481" unbound="true"/>
   </node>
   <link client_id="lan0">
