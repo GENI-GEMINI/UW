@@ -1409,7 +1409,7 @@ def install_Active_measurements(nodes_sliver_urns,GN_sliver_urn,username,USERURN
 	#sudo install -D -g geniuser -o root -m 440 /tmp/lampcert.pem  /usr/local/etc/protogeni/ssl/
 
         #Get the GN hostname for the active install scripts
-        (GNHOST,hostname_from_urn,port,auth_type,vid)=host_info(GN_sliver_urn)
+        (GNHOST,hostname_from_urn,port,auth_type,vid)=host_info[GN_sliver_urn].split(" ")
 
 	#Install software on GN Node regardless
 	NODE_TYPE = "GN"

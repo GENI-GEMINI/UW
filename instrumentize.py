@@ -325,7 +325,7 @@ for my_manager in managers_to_monitor:
         gemini_util.drupal_account_create(my_manager["GN_sliver_urn"],username,password,email_id,dp_username,dp_passwd,LOGFILE,keyfile,debug)
 
 	#Do all active measurement stuff
-        gemini_util.install_Active_measurements(my_manager["nodes_sliver_urn"],my_manager["GN_sliver_urn"],username,USERURN,SLICEURN,GNHOST,my_manager["LAMPCERT"],LOGFILE,keyfile,debug)
+        gemini_util.install_Active_measurements(my_manager["nodes_sliver_urn"],my_manager["GN_sliver_urn"],username,USERURN,SLICEURN,my_manager["LAMPCERT"],LOGFILE,keyfile,debug)
 
         gemini_util.initialize_Drupal_menu(my_manager["GN_sliver_urn"],username,SLICENAME,dp_username,dp_passwd,LOGFILE,keyfile,debug)
 	# Unlock the GN
