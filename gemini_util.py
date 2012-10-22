@@ -1278,6 +1278,8 @@ def getHostnameFromExt(node,urn,rspec_version):
 		vnode_ext = node.getElementsByTagName('rs:vnode')
 		if not (vnode_ext):
 			vnode_ext = node.getElementsByTagName('emulab:vnode')
+                if not (vnode_ext):
+                    vnode_ext = node.getElementsByTagName('vnode')
 		hostname = vnode_ext.item(0).getAttribute('name')
 		breaks.pop()
 	else:
