@@ -141,7 +141,7 @@ def install_keys_plus_shell_in_a_box( GN_Node,MP_Nodes,debug,LOGFILE,keyfile):
 			msg = "SCP to "+hostname+":"+port+" failed "+ err_ssh
 			return FALSE,msg
 
-		node_cmd ="sudo mv "+my_mckeyfile+" "+public_key_dest+";cd /tmp;sudo rm -rf GDESKTOP_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/GDESKTOP_SETUP.tgz;tar xzf GDESKTOP_SETUP.tgz;sudo ./GDESKTOP_SETUP.sh MP init "
+		node_cmd ="sudo mv "+'/tmp/'+os.path.basename(my_mckeyfile)+" "+public_key_dest+";cd /tmp;sudo rm -rf GDESKTOP_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/GDESKTOP_SETUP.tgz;tar xzf GDESKTOP_SETUP.tgz;sudo ./GDESKTOP_SETUP.sh MP init "
 	        p = multiprocessing.Process(target=NodeInstall,args=(Node,node_cmd,'initialization',LOGFILE,debug,keyfile,))
 		proclist.append(p)
 		p.start()                                                                                                                      
@@ -750,7 +750,7 @@ def set_unset_LOCK(Node,flag,LOGFILE,keyfile,debug):
 		return FALSE,msg
 	f.close()
 	
-	sendcmd = 'sudo mv '+adata+' '+INSTOOLS_LOCK+';'
+	sendcmd = 'sudo mv '+'/tmp/'+os.path.basename(adata)+' '+INSTOOLS_LOCK+';'
 #	process = subprocess.Popen(ssh+ssh_options+username+'@'+hostname+' \''+sendcmd+'\'', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
 #	write_to_processlog(process, LOGFILE)
 	
@@ -1343,6 +1343,14 @@ def getLOGBASE():
 		print "Using Alternate Log Base"
 	return LOGBASE
 
+def getCert_issuer_n_username():
+	global CERTIFICATE
+	cert = M2Crypto.X509.load_cert(CERTIFICATE)
+	X509_EXT = cert.get_ext('subjectAltName').get_value()
+	(USER_URN,others) = X509_EXT.split(',',1)
+	(junk,domain,type,username) = USER_URN.split('+')
+	return (domain.replace('.','_')).replace(':','_'),username
+	
 def getCacheFilename(CERT_ISSUER,username,SLICENAME):
 	return '/tmp/.gemini/'+CERT_ISSUER+'-'+username+'-'+SLICENAME+'.json'
 

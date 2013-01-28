@@ -119,8 +119,7 @@ except:
 try:
 	ctx = M2Crypto.SSL.Context("sslv23")
 	ctx.load_cert(gemini_util.CERTIFICATE,gemini_util.CERTIFICATE,gemini_util.PassPhraseCB)
-	cert = M2Crypto.X509.load_cert(gemini_util.CERTIFICATE )
-	(CERT_ISSUER,username) = (cert.get_subject().OU).split(".",1)
+	(CERT_ISSUER,username) = gemini_util.getCert_issuer_n_username()
 except M2Crypto.SSL.SSLError:
 	msg = "Invalid passphrase provided"
         gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
@@ -175,7 +174,7 @@ if (UserOBJ['code'] == 0):
 	email_id = UserInfo['email']
 	USERURN = UserInfo['userurn']
 	user_crypt = UserInfo['user_crypt']
-	CERT_ISSUER = UserInfo['certificate_issuer']
+#	CERT_ISSUER = UserInfo['certificate_issuer']
 else:
 	msg = "User not identified : "+ UserOBJ['output']
         gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
