@@ -28,8 +28,10 @@ import M2Crypto
 from urlparse import urlsplit, urlunsplit
 import re
 import xmlrpclib
+import urlparse
 import urllib
 import urllib2
+import httplib
 import xml.sax
 import string
 import time
@@ -45,6 +47,7 @@ import crypt
 import random
 import multiprocessing
 import paramiko
+import genproxy         # Import certificate generation routines
 
 #globals 
 ssh = 'ssh'
@@ -58,6 +61,7 @@ ARCHIVE_CMD_FILE=measure_scripts_path+"/archive_cmd.sh"
 version="0.2"
 mc_repo_rooturl="http://gemini.netlab.uky.edu/"
 lampca = "https://unis.incntre.iu.edu/protogeni/xmlrpc/lampca"
+UNIS_URL = "https://unis.incntre.iu.edu:8443"
 INSTOOLS_repo_url = mc_repo_rooturl+"GEMINI/"+version+"/"
 EXP_NODE_tmppath = "/tmp"
 EXP_TMP_PATH = "/tmp"
@@ -1122,6 +1126,39 @@ def ActiveInstall(Node,node_cmd,cert_file,LOGFILE,debug,keyfile):
 
 	return
 
+def install_GN_Certs(GN_Nodes,LOGFILE,debug):
+	global passphrase
+	for node in GN_Nodes:
+		write_to_log(LOGFILE,"Generating certificates for "+node['nodeid'],printtoscreen,debug)
+		genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,"/tmp/gn_cert.pem","/tmp/gn_key.pem", "GN-MS",7,passphrase)
+		# scp these via sshConnection...
+		genproxy.make_attribute_cert(CERTIFICATE,CERTIFICATE,"/tmp/gn_cert.pem","slice_admin_for_UUID","/tmp/gn_attr.der",passphrase)
+		# POST the attribute cert to UNIS
+
+
+def install_MP_Certs(MP_Nodes,LOGFILE,debug):
+	global passphrase
+        for node in MP_Nodes:
+                write_to_log(LOGFILE,"Generating certificates for "+node['nodeid'],printtoscreen,debug)
+                genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,"/tmp/mp_cert.pem","/tmp/mp_key.pem", "blipp",7,passphrase)
+		# scp these via sshConnection...
+		genproxy.make_attribute_cert(CERTIFICATE,CERTIFICATE,"/tmp/mp_cert.pem","slice_admin_for_UUID","/tmp/mp_attr.der",passphrase)
+		# POST the attribute cert to UNIS
+	
+
+#POST some data to specified UNIS endpoints
+def postDataToUNIS(key,cert,endpoint,data,LOGFILE,debug):
+	url = UNIS_URL+endpoint
+	o = urlparse(url)
+	conn = httplib.HTTPSConnection(o.hostname, o.port, key, cert)
+	conn.request("POST", o.path, data)
+	r = conn.getresponse()
+	data = r.read()
+	if r.status != 200:
+		write_to_log(LOGFILE,"Could not POST to UNIS at "+url,printtoscreen,debug)
+		return None
+	else:
+		return data
 
 #Download Manifest from the GeniDesktop Parser Service after identifying your self
 def downloadManifestFromParser(slice_crypt,cmurn,LOGFILE,debug):
@@ -1135,7 +1172,7 @@ def downloadManifestFromParser(slice_crypt,cmurn,LOGFILE,debug):
 	        parseString(post_return)
 		return post_return # Means returning a valid XML file as string
 	except:
-		write_to_log(LOGFILE,"Parser error when parsing Manifest for "+cmurn,gemini_util.printtoscreen,debug)
+		write_to_log(LOGFILE,"Parser error when parsing Manifest for "+cmurn,printtoscreen,debug)
 		return ''
 		pass
 

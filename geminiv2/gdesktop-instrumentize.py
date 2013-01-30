@@ -304,68 +304,71 @@ if(not FILE):
 	f.close
 
 
-#msg = "Fetching Slice Credential from the GeniDesktop Parser"
-#gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-#CredJSON = gemini_util.getSliceCredentialFromParser(slice_crypt,user_crypt,LOGFILE,debug)
-#try:
-#	CredOBJ = json.loads(CredJSON)
-#	gemini_util.write_to_log(LOGFILE,CredJSON,gemini_util.dontprinttoscreen,debug)
-#except ValueError:
-#	msg ="Slice Credential JSON Loading Error"
-#	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-#	sys.exit(1)
-#
-#if (CredOBJ['code'] == 0):
-#	slicecred = CredOBJ['output']
-#else:
-#	msg = "Error obtaining Slice Credential : "+ CredOBJ['output']
-#        gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-#	sys.exit(1)
-#	
-## Fetching LAMP Cert 
-#msg = "Asking for my lamp certificate\n"
-#gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-#
-#params = {}
-#params["credential"] = (slicecred,)
-#rval,response = gemini_util.do_method(ctx,"lamp", "GetLAMPSliceCertificate", params, URI=gemini_util.lampca)
-#if rval:
-#	msg = "Could not get Lamp Certificate: " +str(response)
-#	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-#	sys.exit(1)
-#	pass
-#
-#
-#LAMPCERT = response["value"]
-#if (not LAMPCERT.find("BEGIN RSA PRIVATE KEY") or not LAMPCERT.find("BEGIN CERTIFICATE")):
-#	msg = "Failed to get valid certificate from LAMP CA. Got \n"+LAMPCERT+"instead\n"
-#	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-#	sys.exit(1)
-#else:
-#	msg = "Certificate from LAMP CA\n"+LAMPCERT+"\n"
-#	gemini_util.write_to_log(LOGFILE,msg,gemini_util.dontprinttoscreen,debug)
-#pass
-#
-#manifest = {}
-##Stripped_slice_cred
-#SLICECRED_FOR_LAMP = slicecred.replace('<?xml version="1.0" encoding="UTF-8" standalone="no"?>','',1).lstrip()
-#for my_manager in managers:
-#	# download Manifest for slice
-#	msg = "Downloading Manifest from the GeniDesktop Parser for "+my_manager
-#	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-#	manifest[my_manager] = gemini_util.downloadManifestFromParser(slice_crypt,my_manager,LOGFILE,debug)	
-#	if (manifest[my_manager] == ''):
-#		msg = "Could not obtain Manifest from "+my_manager+"for "+SLICEURN+" from GeniDesktop Parser"
-#		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-#		sys.exit(1)
-#	#Sending Manifest to UNIS
-#	(state,msg) = gemini_util.LAMP_sendmanifest(SLICEURN,manifest[my_manager],LAMPCERT,SLICECRED_FOR_LAMP,LOGFILE,debug)
-#	if( not state):
-#		msg = msg +"\nFailed to send manifest to UNIS\n"
-#		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-#		sys.exit(1)
-#	else:
-#		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+msg = "Fetching Slice Credential from the GeniDesktop Parser"
+gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+CredJSON = gemini_util.getSliceCredentialFromParser(slice_crypt,user_crypt,LOGFILE,debug)
+try:
+	CredOBJ = json.loads(CredJSON)
+	gemini_util.write_to_log(LOGFILE,CredJSON,gemini_util.dontprinttoscreen,debug)
+except ValueError:
+	msg ="Slice Credential JSON Loading Error"
+	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	sys.exit(1)
+
+if (CredOBJ['code'] == 0):
+	slicecred = CredOBJ['output']
+else:
+	msg = "Error obtaining Slice Credential : "+ CredOBJ['output']
+        gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	sys.exit(1)
+	
+# Fetching LAMP Cert 
+msg = "Asking for my lamp certificate\n"
+gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+
+params = {}
+params["credential"] = (slicecred,)
+rval,response = gemini_util.do_method(ctx,"lamp", "GetLAMPSliceCertificate", params, URI=gemini_util.lampca)
+if rval:
+	msg = "Could not get Lamp Certificate: " +str(response)
+	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	sys.exit(1)
+	pass
+
+
+LAMPCERT = response["value"]
+if (not LAMPCERT.find("BEGIN RSA PRIVATE KEY") or not LAMPCERT.find("BEGIN CERTIFICATE")):
+	msg = "Failed to get valid certificate from LAMP CA. Got \n"+LAMPCERT+"instead\n"
+	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	sys.exit(1)
+else:
+	msg = "Certificate from LAMP CA\n"+LAMPCERT+"\n"
+	gemini_util.write_to_log(LOGFILE,msg,gemini_util.dontprinttoscreen,debug)
+pass
+
+manifest = {}
+#Stripped_slice_cred
+SLICECRED_FOR_LAMP = slicecred.replace('<?xml version="1.0" encoding="UTF-8" standalone="no"?>','',1).lstrip()
+for my_manager in managers:
+	# download Manifest for slice
+	msg = "Downloading Manifest from the GeniDesktop Parser for "+my_manager
+	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	manifest[my_manager] = gemini_util.downloadManifestFromParser(slice_crypt,my_manager,LOGFILE,debug)	
+	if (manifest[my_manager] == ''):
+		msg = "Could not obtain Manifest from "+my_manager+"for "+SLICEURN+" from GeniDesktop Parser"
+		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+		sys.exit(1)
+	#Sending Manifest to old UNIS
+	(state,msg) = gemini_util.LAMP_sendmanifest(SLICEURN,manifest[my_manager],LAMPCERT,SLICECRED_FOR_LAMP,LOGFILE,debug)
+	if( not state):
+		msg = msg +"\nFailed to send manifest to UNIS\n"
+		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+		sys.exit(1)
+	else:
+		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+
+	#Sending Manifest to new UNIS
+	
 
 for my_manager in managers:
 
@@ -422,9 +425,10 @@ for my_manager in managers:
 	gemini_util.do_netflow_stuff(pruned_GN_Nodes[0],'start',LOGFILE,keyfile,debug)
 	gemini_util.vnc_passwd_create(pruned_MP_Nodes,pruned_GN_Nodes[0],LOGFILE,keyfile,debug)
 	gemini_util.drupal_account_create(pruned_GN_Nodes[0],LOGFILE,keyfile,debug)
-#	msg = "Installing and configuring MP Nodes for Active Measurements"
-#	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-#	gemini_util.install_Active_measurements(pruned_MP_Nodes,pruned_GN_Nodes[0],USERURN,SLICEURN,LAMPCERT,LOGFILE,keyfile,debug)
+
+	msg = "Installing and configuring MP Nodes for Active Measurements"
+	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	gemini_util.install_Active_measurements(pruned_MP_Nodes,pruned_GN_Nodes[0],USERURN,SLICEURN,LAMPCERT,LOGFILE,keyfile,debug)
 
 	gemini_util.initialize_Drupal_menu(pruned_GN_Nodes[0],LOGFILE,keyfile,debug)
 	# Unlock the GN

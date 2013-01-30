@@ -247,7 +247,6 @@ if(NodesOBJ['code'] != 0):
         gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 	sys.exit(1)
 
-
 Nodes = NodesOBJ['output']
 for Node in Nodes:
 	nodeid = Node['nodeid']
@@ -365,5 +364,6 @@ for my_manager in managers:
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 		sys.exit(1)
 
-
-
+	# Generate and install proxy certificates for services on each node (GN and MP)
+	gemini_util.install_GN_Certs(pruned_GN_Nodes,LOGFILE,debug)
+	gemini_util.install_MP_Certs(pruned_MP_Nodes,LOGFILE,debug)
