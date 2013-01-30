@@ -14,14 +14,17 @@ USER_KEY_FILE="/tmp/user_key.pem"
 
 CSRCONF = '''
 [ req ]
+  default_bits       = 512
   distinguished_name = req_distinguished_name
+  encrypt_rsa_key    = no
+  default_md         = md5
 
 [ req_distinguished_name ]
 
 [ v3_proxy ]
   basicConstraints=CA:FALSE
   authorityKeyIdentifier=keyid,issuer:always
-  proxyCertInfo=critical,language:id-ppl-anyLanguage,pathlen:0
+  proxyCertInfo=critical,language:id-ppl-independent,pathlen:0
 '''
 
 CMD_ISSUER_SUBJECT = '''
@@ -29,7 +32,7 @@ openssl x509 -noout -in %s -subject
 '''
 
 CMD_CERT_REQUEST = '''
-openssl req -new -nodes -keyout %s -out %s -newkey rsa:%d -subj \"%s\"
+openssl req -new -config %s -keyout %s -out %s -subj \"%s/CN=%s\"
 '''
 
 CMD_CREATE_PROXY = '''
@@ -40,7 +43,7 @@ CMD_CREATE_ATTR = '''
 creddy --attribute --issuer %s --key %s --role %s --subject-cert %s --out %s
 '''
 
-def make_proxy_cert(icert, ikey, pcert, pkey, bits, lifetime, PASSPHRASE):
+def make_proxy_cert(icert, ikey, pcert, pkey, CN, lifetime, PASSPHRASE):
     try:
         with open(CSRCONF_FILENAME) as f: pass
     except IOError as e:
@@ -53,7 +56,7 @@ def make_proxy_cert(icert, ikey, pcert, pkey, bits, lifetime, PASSPHRASE):
     (out, err) = process.communicate()
     issuer_subject = out.split("subject= ")[1].strip('\n')
 
-    cmd_req = CMD_CERT_REQUEST % (pkey, TEMP_REQFILE, bits, issuer_subject)
+    cmd_req = CMD_CERT_REQUEST % (CSRCONF_FILENAME, pkey, TEMP_REQFILE, issuer_subject, CN)
     process = subprocess.Popen(cmd_req, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     (out, err) = process.communicate()
     
@@ -134,7 +137,8 @@ def __test():
     parser.add_option("-r", "--role", dest="role", default=None, help="role to assign")
     parser.add_option("-l", "--lifetime", dest="lt", default=7, help="certificate lifetime (default=%default)")
     parser.add_option("-o", "--certout", dest="outcert", default=None, help="name of output certificate")
-    parser.add_option("-u", "--keyout", dest="outkey", default=None, help="name of output key file")    
+    parser.add_option("-u", "--keyout", dest="outkey", default=None, help="name of output key file")
+    parser.add_option("-n", "--cn", dest="cn", default="12345678", help="common name to append to proxy subject")
     options, args = parser.parse_args(sys.argv[1:])
 
     from M2Crypto.util import passphrase_callback
@@ -144,7 +148,7 @@ def __test():
         make_attribute_cert(options.icert, options.ikey, options.scert, options.role, options.outcert, passphrase)
         
     if (not options.attr) and options.outcert and options.outkey:
-        make_proxy_cert(options.icert, options.ikey, options.outcert, options.outkey, 1024, options.lt, passphrase)
+        make_proxy_cert(options.icert, options.ikey, options.outcert, options.outkey, options.cn, options.lt, passphrase)
 
 if __name__ == "__main__":
     __test()
