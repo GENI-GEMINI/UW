@@ -1126,7 +1126,7 @@ def ActiveInstall(Node,node_cmd,cert_file,LOGFILE,debug,keyfile):
 
 	return
 
-def install_irods_Certs(GN_Nodes,keyfile,LOGFILE,debug):
+def install_irods_Certs(GN_Nodes,keyfile,lifetime,LOGFILE,debug):
 	global passphrase
 	f1 = tempfile.NamedTemporaryFile(delete=False)
 	f2 = tempfile.NamedTemporaryFile(delete=False)
@@ -1139,12 +1139,11 @@ def install_irods_Certs(GN_Nodes,keyfile,LOGFILE,debug):
 		username = node['login_username']
 		vid = node['nodeid']
 		write_to_log(LOGFILE,"Generating proxy certificate for Irods service on "+vid,printtoscreen,debug)
-		genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,proxycert_file,proxykey_file, "irods",7,passphrase)
+		genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,proxycert_file,proxykey_file, "irods",lifetime,passphrase)
 		f2.seek(0)
 		f1.seek(0,2)
 		f1.write(f2.read())
 		f1.flush()
-		# scp these via sshConnection...
 
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'scp',None,proxycert_file,'/tmp/'+os.path.basename(proxycert_file))
 		write_to_processlog(out_ssh,err_ssh,LOGFILE)
@@ -1156,7 +1155,7 @@ def install_irods_Certs(GN_Nodes,keyfile,LOGFILE,debug):
 	os.remove(proxycert_file)
 	os.remove(proxykey_file)
 
-def install_GN_Certs(GN_Nodes,keyfile,LOGFILE,debug):
+def install_GN_Certs(GN_Nodes,keyfile,lifetime,auth_uuid,LOGFILE,debug):
 	global passphrase
 	f1 = tempfile.NamedTemporaryFile(delete=False)
 	f2 = tempfile.NamedTemporaryFile(delete=False)
@@ -1165,18 +1164,19 @@ def install_GN_Certs(GN_Nodes,keyfile,LOGFILE,debug):
         gn_ms_proxykey_file = f2.name
         gn_ms_proxyder_file = f3.name
 
+	role = "slice_admin_for_%s" % auth_uuid.replace("-", "")
+
 	for node in GN_Nodes:
 		hostname = node['login_hostname']
 		port = node['login_port']
 		username = node['login_username']
 		vid = node['nodeid']
 		write_to_log(LOGFILE,"Generating GN_MS certificates for "+vid,printtoscreen,debug)
-		genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,gn_ms_proxycert_file,gn_ms_proxykey_file, "GN-MS",7,passphrase)
-		genproxy.make_attribute_cert(CERTIFICATE,CERTIFICATE,gn_ms_proxycert_file,"slice_admin_for_UUID",gn_ms_proxyder_file,passphrase)
+		genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,gn_ms_proxycert_file,gn_ms_proxykey_file, "GN-MS",lifetime,passphrase)
+		genproxy.make_attribute_cert(CERTIFICATE,CERTIFICATE,gn_ms_proxycert_file,role,gn_ms_proxyder_file,passphrase)
 		# POST the attribute cert to UNIS
 
 		# scp these via sshConnection...
-
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'scp',None,gn_ms_proxycert_file,'/tmp/'+os.path.basename(gn_ms_proxycert_file))
 		write_to_processlog(out_ssh,err_ssh,LOGFILE)
 
@@ -1193,7 +1193,7 @@ def install_GN_Certs(GN_Nodes,keyfile,LOGFILE,debug):
 	os.remove(gn_ms_proxyder_file)
 
 
-def install_MP_Certs(MP_Nodes,keyfile,LOGFILE,debug):
+def install_MP_Certs(MP_Nodes,keyfile,lifetime,auth_uuid,LOGFILE,debug):
 	global passphrase
 	f1 = tempfile.NamedTemporaryFile(delete=False)
 	f2 = tempfile.NamedTemporaryFile(delete=False)
@@ -1202,14 +1202,16 @@ def install_MP_Certs(MP_Nodes,keyfile,LOGFILE,debug):
         mp_blipp_proxykey_file = f2.name
         mp_blipp_proxyder_file = f3.name
 
+	role = "slice_admin_for_%s" % auth_uuid.replace("-","")
+
         for node in MP_Nodes:
 		hostname = node['login_hostname']
 		port = node['login_port']
 		username = node['login_username']
 		vid = node['nodeid']
                 write_to_log(LOGFILE,"Generating MP Blipp certificates for "+vid,printtoscreen,debug)
-                genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,mp_blipp_proxycert_file,mp_blipp_proxykey_file, "blipp",7,passphrase)
-		genproxy.make_attribute_cert(CERTIFICATE,CERTIFICATE,mp_blipp_proxycert_file,"slice_admin_for_UUID",mp_blipp_proxyder_file,passphrase)
+                genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,mp_blipp_proxycert_file,mp_blipp_proxykey_file, "blipp",lifetime,passphrase)
+		genproxy.make_attribute_cert(CERTIFICATE,CERTIFICATE,mp_blipp_proxycert_file,role,mp_blipp_proxyder_file,passphrase)
 		# POST the attribute cert to UNIS
 
 		# scp these via sshConnection...
@@ -1230,13 +1232,14 @@ def install_MP_Certs(MP_Nodes,keyfile,LOGFILE,debug):
 #POST some data to specified UNIS endpoints
 def postDataToUNIS(key,cert,endpoint,data,LOGFILE,debug):
 	url = UNIS_URL+endpoint
-	o = urlparse(url)
+	o = urlparse.urlparse(url)
 	conn = httplib.HTTPSConnection(o.hostname, o.port, key, cert)
 	conn.request("POST", o.path, data)
 	r = conn.getresponse()
 	data = r.read()
 	if r.status != 200:
 		write_to_log(LOGFILE,"Could not POST to UNIS at "+url,printtoscreen,debug)
+		write_to_log(LOGFILE,"  Error: "+data,printtoscreen,debug)
 		return None
 	else:
 		return data
