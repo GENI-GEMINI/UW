@@ -395,6 +395,13 @@ for my_manager in managers:
 	else:
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 
+
+	# Generate and install proxy certificates for services on each node (GN and MP)
+	gemini_util.install_GN_Certs(pruned_GN_Nodes,keyfile,LOGFILE,debug)
+	gemini_util.install_MP_Certs(pruned_MP_Nodes,keyfile,LOGFILE,debug)
+	gemini_util.install_irods_Certs(pruned_GN_Nodes,keyfile,LOGFILE,debug)
+
+
 	# This lock will just set a flag on the GN to indicate the beginning of the configuration process
 	(status,msg) = gemini_util.lock_unlock_MC(pruned_GN_Nodes[0],"instrument_lock",LOGFILE,keyfile,debug)
 	if(not status):
@@ -422,11 +429,11 @@ for my_manager in managers:
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 		sys.exit(1)
 	gemini_util.do_netflow_stuff(pruned_GN_Nodes[0],'init',LOGFILE,keyfile,debug)
-	gemini_util.do_netflow_stuff(pruned_GN_Nodes[0],'start',LOGFILE,keyfile,debug)
+#	gemini_util.do_netflow_stuff(pruned_GN_Nodes[0],'start',LOGFILE,keyfile,debug)
 	gemini_util.vnc_passwd_create(pruned_MP_Nodes,pruned_GN_Nodes[0],LOGFILE,keyfile,debug)
 	gemini_util.drupal_account_create(pruned_GN_Nodes[0],LOGFILE,keyfile,debug)
 
-	msg = "Installing and configuring MP Nodes for Active Measurements"
+	msg = "Installing and configuring GN and MP Nodes for Active Measurements"
 	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 	gemini_util.install_Active_measurements(pruned_MP_Nodes,pruned_GN_Nodes[0],USERURN,SLICEURN,LAMPCERT,LOGFILE,keyfile,debug)
 
