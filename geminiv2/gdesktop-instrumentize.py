@@ -361,6 +361,24 @@ except Exception, msg:
 validity = datetime.timedelta(seconds=slice_lifetime)
 slice_lifetime = validity.days + 1
 
+#Now setup a proxy cert for the instrumentize script so we can talk to UNIS without keypass
+gemini_util.makeInstrumentizeProxy(slice_lifetime,slice_uuid,LOGFILE,debug)
+if not (gemini_util.PROXY_CERT and gemini_util.PROXY_KEY):
+	msg = "Could not create proxy certificate for instrumentize process"
+	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	sys.exit(1)
+
+msg="Registering slice credential with Global UNIS"
+gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+res1 = gemini_util.postDataToUNIS(gemini_util.CERTIFICATE,gemini_util.CERTIFICATE,"/credentials/genislice",slicecred,LOGFILE,debug)
+f = open(gemini_util.PROXY_ATTR)
+res2 = gemini_util.postDataToUNIS(gemini_util.PROXY_KEY,gemini_util.PROXY_CERT,"/credentials/geniuser",f,LOGFILE,debug)
+f.close()
+if res1 or res2 is None:
+	msg="Failed to register slice credential"
+	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	sys.exit(1)
+
 # Fetching LAMP Cert 
 msg = "Asking for my lamp certificate\n"
 gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
@@ -417,8 +435,7 @@ for my_manager in managers:
 	unis_string = json.dumps(unis_topology)
 	msg = "Sending manifest to Global UNIS"
 	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-	result = gemini_util.postDataToUNIS(gemini_util.CERTIFICATE,gemini_util.CERTIFICATE,"/domains",unis_string,LOGFILE,debug)
-	
+	result = gemini_util.postDataToUNIS(gemini_util.PROXY_KEY,gemini_util.PROXY_CERT,"/domains",unis_string,LOGFILE,debug)
 
 for my_manager in managers:
 
@@ -481,7 +498,7 @@ for my_manager in managers:
 	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 	gemini_util.install_GN_Certs(pruned_GN_Nodes,keyfile,slice_lifetime,slice_uuid,LOGFILE,debug)
 	gemini_util.install_MP_Certs(pruned_MP_Nodes,keyfile,slice_lifetime,slice_uuid,LOGFILE,debug)
-	gemini_util.install_irods_Certs(pruned_GN_Nodes,keyfile,slice_filetime,LOGFILE,debug)
+	gemini_util.install_irods_Certs(pruned_GN_Nodes,keyfile,slice_lifetime,LOGFILE,debug)
 
 	msg = "Installing and configuring MP Nodes for Active Measurements"
 	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)

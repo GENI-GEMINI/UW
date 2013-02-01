@@ -80,6 +80,9 @@ CERTIFICATE     = HOME + "/.ssl/encrypted.pem"
 PASSPHRASEFILE  = HOME + "/.ssl/password"
 passphrase = ''
 PID = str(os.getpid())
+PROXY_CERT      = None
+PROXY_KEY       = None
+PROXY_ATTR      = None
 
 def print_timing(func):
     def wrapper(*arg):
@@ -1126,6 +1129,20 @@ def ActiveInstall(Node,node_cmd,cert_file,LOGFILE,debug,keyfile):
 
 	return
 
+def makeInstrumentizeProxy(lifetime,auth_uuid,LOGFILE,debug):
+	global passphrase
+	global PROXY_CERT
+	global PROXY_KEY
+	global PROXY_ATTR
+	PROXY_CERT = tempfile.NamedTemporaryFile(delete=False).name
+	PROXY_KEY = tempfile.NamedTemporaryFile(delete=False).name
+	PROXY_ATTR = tempfile.NamedTemporaryFile(delete=False).name
+
+	role = "slice_admin_for_%s" % auth_uuid.replace("-", "")
+
+	genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,PROXY_CERT,PROXY_KEY,"instrumentize",lifetime,passphrase)
+	genproxy.make_attribute_cert(CERTIFICATE,CERTIFICATE,PROXY_CERT,role,PROXY_ATTR,passphrase)
+
 def install_irods_Certs(GN_Nodes,keyfile,lifetime,LOGFILE,debug):
 	global passphrase
 	f1 = tempfile.NamedTemporaryFile(delete=False)
@@ -1148,7 +1165,7 @@ def install_irods_Certs(GN_Nodes,keyfile,lifetime,LOGFILE,debug):
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'scp',None,proxycert_file,'/tmp/'+os.path.basename(proxycert_file))
 		write_to_processlog(out_ssh,err_ssh,LOGFILE)
 	
-		cmd = 'sudo install /tmp/'+os.path.basename(proxycert_file)+' /usr/local/etc/certs/irods-proxy.pem -o root -g root -m 600;'
+		cmd = 'sudo install -D /tmp/'+os.path.basename(proxycert_file)+' /usr/local/etc/certs/irods-proxy.pem -o root -g root -m 600;'
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',cmd,None,None)
 		write_to_processlog(out_ssh,err_ssh,LOGFILE)
 
@@ -1174,8 +1191,12 @@ def install_GN_Certs(GN_Nodes,keyfile,lifetime,auth_uuid,LOGFILE,debug):
 		write_to_log(LOGFILE,"Generating GN_MS certificates for "+vid,printtoscreen,debug)
 		genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,gn_ms_proxycert_file,gn_ms_proxykey_file, "GN-MS",lifetime,passphrase)
 		genproxy.make_attribute_cert(CERTIFICATE,CERTIFICATE,gn_ms_proxycert_file,role,gn_ms_proxyder_file,passphrase)
-		# POST the attribute cert to UNIS
 
+		# send attribute certs to UNIS
+		f = open(gn_ms_proxyder_file)
+                postDataToUNIS(gn_ms_proxykey_file,gn_ms_proxycert_file,"/credentials/geniuser",f,LOGFILE,debug)
+		f.close()
+		
 		# scp these via sshConnection...
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'scp',None,gn_ms_proxycert_file,'/tmp/'+os.path.basename(gn_ms_proxycert_file))
 		write_to_processlog(out_ssh,err_ssh,LOGFILE)
@@ -1184,7 +1205,7 @@ def install_GN_Certs(GN_Nodes,keyfile,lifetime,auth_uuid,LOGFILE,debug):
 		write_to_processlog(out_ssh,err_ssh,LOGFILE)
 
 	
-		cmd = 'sudo install /tmp/'+os.path.basename(gn_ms_proxycert_file)+' /usr/local/etc/certs/gn_cert.pem -o root -g root -m 600;sudo install /tmp/'+os.path.basename(gn_ms_proxykey_file)+' /usr/local/etc/certs/gn_key.pem -o root -g root -m 600;'
+		cmd = 'sudo install -D /tmp/'+os.path.basename(gn_ms_proxycert_file)+' /usr/local/etc/certs/gn_cert.pem -o root -g root -m 600;sudo install -D /tmp/'+os.path.basename(gn_ms_proxykey_file)+' /usr/local/etc/certs/gn_key.pem -o root -g root -m 600;'
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',cmd,None,None)
 		write_to_processlog(out_ssh,err_ssh,LOGFILE)
 
@@ -1212,7 +1233,11 @@ def install_MP_Certs(MP_Nodes,keyfile,lifetime,auth_uuid,LOGFILE,debug):
                 write_to_log(LOGFILE,"Generating MP Blipp certificates for "+vid,printtoscreen,debug)
                 genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,mp_blipp_proxycert_file,mp_blipp_proxykey_file, "blipp",lifetime,passphrase)
 		genproxy.make_attribute_cert(CERTIFICATE,CERTIFICATE,mp_blipp_proxycert_file,role,mp_blipp_proxyder_file,passphrase)
-		# POST the attribute cert to UNIS
+
+		# send attribute certs to UNIS
+		f = open(mp_blipp_proxyder_file)
+		postDataToUNIS(mp_blipp_proxykey_file,mp_blipp_proxycert_file,"/credentials/geniuser",f,LOGFILE,debug)
+		f.close()
 
 		# scp these via sshConnection...
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'scp',None,mp_blipp_proxycert_file,'/tmp/'+os.path.basename(mp_blipp_proxycert_file))
@@ -1221,7 +1246,7 @@ def install_MP_Certs(MP_Nodes,keyfile,lifetime,auth_uuid,LOGFILE,debug):
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'scp',None,mp_blipp_proxykey_file,'/tmp/'+os.path.basename(mp_blipp_proxykey_file))
 		write_to_processlog(out_ssh,err_ssh,LOGFILE)
 
-		cmd = 'sudo install /tmp/'+os.path.basename(mp_blipp_proxycert_file)+' /usr/local/etc/certs/mp_cert.pem -o root -g root -m 600;sudo install /tmp/'+os.path.basename(mp_blipp_proxykey_file)+' /usr/local/etc/certs/mp_key.pem -o root -g root -m 600;'
+		cmd = 'sudo install -D /tmp/'+os.path.basename(mp_blipp_proxycert_file)+' /usr/local/etc/certs/mp_cert.pem -o root -g root -m 600;sudo install -D /tmp/'+os.path.basename(mp_blipp_proxykey_file)+' /usr/local/etc/certs/mp_key.pem -o root -g root -m 600;'
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',cmd,None,None)
 		write_to_processlog(out_ssh,err_ssh,LOGFILE)
 
@@ -1237,7 +1262,7 @@ def postDataToUNIS(key,cert,endpoint,data,LOGFILE,debug):
 	conn.request("POST", o.path, data)
 	r = conn.getresponse()
 	data = r.read()
-	if r.status != 200:
+	if r.status not in (200, 201):
 		write_to_log(LOGFILE,"Could not POST to UNIS at "+url,printtoscreen,debug)
 		write_to_log(LOGFILE,"  Error: "+data,printtoscreen,debug)
 		return None
