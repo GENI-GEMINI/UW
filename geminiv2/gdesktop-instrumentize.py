@@ -316,7 +316,10 @@ except ValueError:
 	sys.exit(1)
 
 if (CredOBJ['code'] == 0):
-	slicecred = CredOBJ['output']
+	CredInfo = CredOBJ['output']
+	slicecred = CredInfo['credential']
+	slicecred_expiry = CredInfo['expires']
+	slicecred_uuid = CredInfo['uuid']
 else:
 	msg = "Error obtaining Slice Credential : "+ CredOBJ['output']
         gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
