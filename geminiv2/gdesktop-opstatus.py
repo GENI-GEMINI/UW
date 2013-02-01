@@ -164,6 +164,7 @@ except ValueError:
 		os.unlink(FILE)
 	
 	msg ="User JSON Loading Error"
+	print UserJSON
 	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 	sys.exit(1)
 

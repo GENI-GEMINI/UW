@@ -34,8 +34,8 @@ from lxml import etree
 from decoder import RSpec3Decoder
 
 # add path for sfa imports
-sys.path.append("/opt/gcf/src")
-from sfa.trust.credential import Credential as GENICredential
+#sys.path.append("/opt/gcf/src")
+#from sfa.trust.credential import Credential as GENICredential
 
 other_details = ""
 managers = []
@@ -315,7 +315,7 @@ if(not FILE):
 
 msg = "Fetching Slice Credential from the GeniDesktop Parser"
 gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-slicered = {}
+#slicered = {}
 CredJSON = gemini_util.getSliceCredentialFromParser(slice_crypt,user_crypt,LOGFILE,debug)
 try:
 	CredOBJ = json.loads(CredJSON)
@@ -325,35 +325,50 @@ except ValueError:
 	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 	sys.exit(1)
 
+slicecred = ''
+expiration = ''
+slice_uuid = ''
+slice_lifetime = {}
 if (CredOBJ['code'] == 0):
 	CredInfo = CredOBJ['output']
 	slicecred = CredInfo['credential']
-	slicecred_expiry = CredInfo['expires']
-	slicecred_uuid = CredInfo['uuid']
+	expiry = CredInfo['expires']
+	slice_uuid = CredInfo['uuid']
 else:
 	msg = "Error obtaining Slice Credential : "+ CredOBJ['output']
         gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 	sys.exit(1)
 
-slice_uuid = {}
-slice_lifetime = {}
-try:
-	cred = GENICredential(string=slicecred)
-	slice_uuid = cred.get_gid_object().get_uuid()
-	if not slice_uuid:
-		slice_uuid = hashlib.md5(cred.get_gid_object().get_urn()).hexdigest()
-		slice_uuid = str(uuid.UUID(slice_uuid))
-	else:
-		slice_uuid = str(uuid.UUID(int=slice_uuid))
-        expiration = cred.get_expiration()
+if (slice_uuid):
+	expiration = datetime.datetime.strptime(expiry,"%Y-%m-%dT%H:%M:%SZ")
         now = datetime.datetime.now(expiration.tzinfo)
         td = expiration - now
         slice_lifetime = int(td.seconds + td.days * 24 * 3600)
-except Exception, msg:
+else:
 	print msg
 	msg = "Could not get slice UUID from slice credential"
 	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 	sys.exit(1)
+
+#slice_uuid = {}
+#slice_lifetime = {}
+#try:
+#	cred = GENICredential(string=slicecred)
+#	slice_uuid = cred.get_gid_object().get_uuid()
+#	if not slice_uuid:
+#		slice_uuid = hashlib.md5(cred.get_gid_object().get_urn()).hexdigest()
+#		slice_uuid = str(uuid.UUID(slice_uuid))
+#	else:
+#		slice_uuid = str(uuid.UUID(int=slice_uuid))
+#        expiration = cred.get_expiration()
+#        now = datetime.datetime.now(expiration.tzinfo)
+#        td = expiration - now
+#        slice_lifetime = int(td.seconds + td.days * 24 * 3600)
+#except Exception, msg:
+#	print msg
+#	msg = "Could not get slice UUID from slice credential"
+#	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+#	sys.exit(1)
 
 #now = datetime.datetime.now()
 #future = now + datetime.timedelta(seconds=slice_lifetime)
@@ -363,7 +378,6 @@ except Exception, msg:
 # round up the lifetime to the next day for now
 validity = datetime.timedelta(seconds=slice_lifetime)
 slice_lifetime = validity.days + 1
-
 #Now setup a proxy cert for the instrumentize script so we can talk to UNIS without keypass
 gemini_util.makeInstrumentizeProxy(slice_lifetime,slice_uuid,LOGFILE,debug)
 if not (gemini_util.PROXY_CERT and gemini_util.PROXY_KEY):
