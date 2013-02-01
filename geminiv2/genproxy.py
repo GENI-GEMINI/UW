@@ -54,18 +54,15 @@ def make_proxy_cert(icert, ikey, pcert, pkey, CN, lifetime, PASSPHRASE):
     cmd_subj = CMD_ISSUER_SUBJECT % icert    
     process = subprocess.Popen(cmd_subj, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     (out, err) = process.communicate()
-    process.wait()
     issuer_subject = out.split("subject= ")[1].strip('\n')
 
     cmd_req = CMD_CERT_REQUEST % (CSRCONF_FILENAME, pkey, TEMP_REQFILE, issuer_subject, CN)
     process = subprocess.Popen(cmd_req, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     (out, err) = process.communicate()
-    process.wait()
     
     cmd_proxy = CMD_CREATE_PROXY % (TEMP_REQFILE, lifetime, pcert, icert, ikey, CSRCONF_FILENAME)
     process = subprocess.Popen(cmd_proxy, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     (out, err) = process.communicate(input=PASSPHRASE)
-    process.wait()
 
     try:
         with open(icert) as f:
@@ -117,7 +114,6 @@ def make_attribute_cert(icert, ikey, scert, role, outcert, PASSPHRASE):
     cmd_attr = CMD_CREATE_ATTR % (icert, ikey, role, creddy_subject_cert, outcert)
     process = subprocess.Popen(cmd_attr, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     (out, err) = process.communicate(input=PASSPHRASE+"\n")
-    process.wait()
 
     try:
         os.remove(creddy_subject_cert)

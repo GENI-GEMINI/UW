@@ -364,4 +364,3 @@ for my_manager in managers:
 		msg = "ERROR @ {"+my_manager+"} :: during Initialization "+str(msg)
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 		sys.exit(1)
-

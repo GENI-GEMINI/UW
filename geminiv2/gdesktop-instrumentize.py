@@ -25,8 +25,17 @@ import os
 import time
 import M2Crypto
 #import urllib
+import uuid
 import json
+import time
+import datetime
 import gemini_util	# Import user defined routines
+from lxml import etree
+from decoder import RSpec3Decoder
+
+# add path for sfa imports
+sys.path.append("/opt/gcf/src")
+from sfa.trust.credential import Credential as GENICredential
 
 other_details = ""
 managers = []
@@ -306,6 +315,7 @@ if(not FILE):
 
 msg = "Fetching Slice Credential from the GeniDesktop Parser"
 gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+slicered = {}
 CredJSON = gemini_util.getSliceCredentialFromParser(slice_crypt,user_crypt,LOGFILE,debug)
 try:
 	CredOBJ = json.loads(CredJSON)
@@ -324,7 +334,54 @@ else:
 	msg = "Error obtaining Slice Credential : "+ CredOBJ['output']
         gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 	sys.exit(1)
-	
+
+slice_uuid = {}
+slice_lifetime = {}
+try:
+	cred = GENICredential(string=slicecred)
+	slice_uuid = cred.get_gid_object().get_uuid()
+	if not slice_uuid:
+		slice_uuid = hashlib.md5(cred.get_gid_object().get_urn()).hexdigest()
+		slice_uuid = str(uuid.UUID(slice_uuid))
+	else:
+		slice_uuid = str(uuid.UUID(int=slice_uuid))
+        expiration = cred.get_expiration()
+        now = datetime.datetime.now(expiration.tzinfo)
+        td = expiration - now
+        slice_lifetime = int(td.seconds + td.days * 24 * 3600)
+except Exception, msg:
+	print msg
+	msg = "Could not get slice UUID from slice credential"
+	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	sys.exit(1)
+
+#now = datetime.datetime.now()
+#future = now + datetime.timedelta(seconds=slice_lifetime)
+#start_date = int(time.mktime(now.timetuple()))
+#end_date = int(time.mktime(future.timetuple()))
+
+# round up the lifetime to the next day for now
+validity = datetime.timedelta(seconds=slice_lifetime)
+slice_lifetime = validity.days + 1
+
+#Now setup a proxy cert for the instrumentize script so we can talk to UNIS without keypass
+gemini_util.makeInstrumentizeProxy(slice_lifetime,slice_uuid,LOGFILE,debug)
+if not (gemini_util.PROXY_CERT and gemini_util.PROXY_KEY):
+	msg = "Could not create proxy certificate for instrumentize process"
+	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	sys.exit(1)
+
+msg="Registering slice credential with Global UNIS"
+gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+res1 = gemini_util.postDataToUNIS(gemini_util.CERTIFICATE,gemini_util.CERTIFICATE,"/credentials/genislice",slicecred,LOGFILE,debug)
+f = open(gemini_util.PROXY_ATTR)
+res2 = gemini_util.postDataToUNIS(gemini_util.PROXY_KEY,gemini_util.PROXY_CERT,"/credentials/geniuser",f,LOGFILE,debug)
+f.close()
+if res1 or res2 is None:
+	msg="Failed to register slice credential"
+	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	sys.exit(1)
+
 # Fetching LAMP Cert 
 msg = "Asking for my lamp certificate\n"
 gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
@@ -369,9 +426,19 @@ for my_manager in managers:
 		sys.exit(1)
 	else:
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-
+		
 	#Sending Manifest to new UNIS
+	topology = etree.XML(manifest[my_manager])
+	encoder = RSpec3Decoder()
+	kwargs = dict(slice_urn=SLICEURN,
+                      slice_uuid=slice_uuid,
+                      component_manager_id=None)
 	
+	unis_topology = encoder.encode(topology, **kwargs)
+	unis_string = json.dumps(unis_topology)
+	msg = "Sending manifest to Global UNIS"
+	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	result = gemini_util.postDataToUNIS(gemini_util.PROXY_KEY,gemini_util.PROXY_CERT,"/domains",unis_string,LOGFILE,debug)
 
 for my_manager in managers:
 
@@ -397,12 +464,6 @@ for my_manager in managers:
 		continue
 	else:
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-
-
-	# Generate and install proxy certificates for services on each node (GN and MP)
-	gemini_util.install_GN_Certs(pruned_GN_Nodes,keyfile,LOGFILE,debug)
-	gemini_util.install_MP_Certs(pruned_MP_Nodes,keyfile,LOGFILE,debug)
-	gemini_util.install_irods_Certs(pruned_GN_Nodes,keyfile,LOGFILE,debug)
 
 
 	# This lock will just set a flag on the GN to indicate the beginning of the configuration process
@@ -436,7 +497,13 @@ for my_manager in managers:
 	gemini_util.vnc_passwd_create(pruned_MP_Nodes,pruned_GN_Nodes[0],LOGFILE,keyfile,debug)
 	gemini_util.drupal_account_create(pruned_GN_Nodes[0],LOGFILE,keyfile,debug)
 
-	msg = "Installing and configuring GN and MP Nodes for Active Measurements"
+	msg = "Generating and installing certificates"
+	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	gemini_util.install_GN_Certs(pruned_GN_Nodes,keyfile,slice_lifetime,slice_uuid,LOGFILE,debug)
+	gemini_util.install_MP_Certs(pruned_MP_Nodes,keyfile,slice_lifetime,slice_uuid,LOGFILE,debug)
+	gemini_util.install_irods_Certs(pruned_GN_Nodes,keyfile,slice_lifetime,LOGFILE,debug)
+
+	msg = "Installing and configuring MP Nodes for Active Measurements"
 	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 	gemini_util.install_Active_measurements(pruned_MP_Nodes,pruned_GN_Nodes[0],USERURN,SLICEURN,LAMPCERT,LOGFILE,keyfile,debug)
 
@@ -447,7 +514,6 @@ for my_manager in managers:
 		msg = msg + "\nERROR @ {"+my_manager+"} :: Problem unlocking\nYour Gemini configuration will not work\nPlease abort and contact GEMINI Dev Team for help\n"
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 		sys.exit(1)
-
 
 
 
