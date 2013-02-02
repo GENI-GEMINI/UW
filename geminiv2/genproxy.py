@@ -82,6 +82,8 @@ def make_proxy_cert(icert, ikey, pcert, pkey, CN, lifetime, PASSPHRASE):
 
 
 def make_attribute_cert(icert, ikey, scert, role, outcert, PASSPHRASE):
+    state = True
+    msg = None
     # creddy *wants* subject cert with _ID.pem ending!
     creddy_subject_cert = scert + "_ID.pem"
     try:
@@ -116,12 +118,19 @@ def make_attribute_cert(icert, ikey, scert, role, outcert, PASSPHRASE):
     (out, err) = process.communicate(input=PASSPHRASE+"\n")
 
     try:
+        check = out.index("Key passphrase:")
+    except ValueError:
+        msg = "Creddy could not create attribute certificate"
+        state = False
+
+    try:
         os.remove(creddy_subject_cert)
         os.remove(USER_CERT_FILE)
         os.remove(USER_KEY_FILE)
     except Exception:
         pass
         
+    return state, msg
 
 def __test():
     import optparse

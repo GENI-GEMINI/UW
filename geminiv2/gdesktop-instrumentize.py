@@ -34,8 +34,8 @@ from lxml import etree
 from decoder import RSpec3Decoder
 
 # add path for sfa imports
-#sys.path.append("/opt/gcf/src")
-#from sfa.trust.credential import Credential as GENICredential
+sys.path.append("/opt/gcf/src")
+from sfa.trust.credential import Credential as GENICredential
 
 other_details = ""
 managers = []
@@ -345,30 +345,29 @@ if (slice_uuid):
         td = expiration - now
         slice_lifetime = int(td.seconds + td.days * 24 * 3600)
 else:
-	print msg
 	msg = "Could not get slice UUID from slice credential"
 	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 	sys.exit(1)
 
-#slice_uuid = {}
+slice_uuid = ''
 #slice_lifetime = {}
-#try:
-#	cred = GENICredential(string=slicecred)
-#	slice_uuid = cred.get_gid_object().get_uuid()
-#	if not slice_uuid:
-#		slice_uuid = hashlib.md5(cred.get_gid_object().get_urn()).hexdigest()
-#		slice_uuid = str(uuid.UUID(slice_uuid))
-#	else:
-#		slice_uuid = str(uuid.UUID(int=slice_uuid))
+try:
+	cred = GENICredential(string=slicecred)
+	slice_uuid = cred.get_gid_object().get_uuid()
+	if not slice_uuid:
+		slice_uuid = hashlib.md5(cred.get_gid_object().get_urn()).hexdigest()
+		slice_uuid = str(uuid.UUID(slice_uuid))
+	else:
+		slice_uuid = str(uuid.UUID(int=slice_uuid))
 #        expiration = cred.get_expiration()
 #        now = datetime.datetime.now(expiration.tzinfo)
 #        td = expiration - now
 #        slice_lifetime = int(td.seconds + td.days * 24 * 3600)
-#except Exception, msg:
-#	print msg
-#	msg = "Could not get slice UUID from slice credential"
-#	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-#	sys.exit(1)
+except Exception, msg:
+	print msg
+	msg = "Could not get slice UUID from slice credential"
+	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	sys.exit(1)
 
 #now = datetime.datetime.now()
 #future = now + datetime.timedelta(seconds=slice_lifetime)
@@ -380,8 +379,8 @@ validity = datetime.timedelta(seconds=slice_lifetime)
 slice_lifetime = validity.days + 1
 #Now setup a proxy cert for the instrumentize script so we can talk to UNIS without keypass
 gemini_util.makeInstrumentizeProxy(slice_lifetime,slice_uuid,LOGFILE,debug)
-if not (gemini_util.PROXY_CERT and gemini_util.PROXY_KEY):
-	msg = "Could not create proxy certificate for instrumentize process"
+if not (gemini_util.PROXY_ATTR):
+	msg = "ERROR: Could not complete proxy certificate creation for instrumentize process"
 	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 	sys.exit(1)
 
@@ -397,7 +396,7 @@ if res1 or res2 is None:
 	sys.exit(1)
 
 # Fetching LAMP Cert 
-msg = "Asking for my lamp certificate\n"
+msg = "Asking for my lamp certificate"
 gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 
 params = {}
@@ -435,7 +434,7 @@ for my_manager in managers:
 	#Sending Manifest to old UNIS
 	(state,msg) = gemini_util.LAMP_sendmanifest(SLICEURN,manifest[my_manager],LAMPCERT,SLICECRED_FOR_LAMP,LOGFILE,debug)
 	if( not state):
-		msg = msg +"\nFailed to send manifest to UNIS\n"
+		msg = msg +"Failed to send manifest to UNIS"
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 		sys.exit(1)
 	else:
@@ -519,7 +518,7 @@ for my_manager in managers:
 
 	msg = "Installing and configuring MP Nodes for Active Measurements"
 	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-	gemini_util.install_Active_measurements(pruned_MP_Nodes,pruned_GN_Nodes[0],USERURN,SLICEURN,LAMPCERT,LOGFILE,keyfile,debug)
+	gemini_util.install_Active_measurements(pruned_MP_Nodes,pruned_GN_Nodes[0],USERURN,SLICEURN,slice_uuid,LAMPCERT,LOGFILE,keyfile,debug)
 
 	gemini_util.initialize_Drupal_menu(pruned_GN_Nodes[0],LOGFILE,keyfile,debug)
 	# Unlock the GN

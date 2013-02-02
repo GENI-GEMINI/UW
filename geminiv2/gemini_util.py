@@ -214,6 +214,7 @@ def InstallMP_Passive (MP_Nodes,GN_Node,debug, LOGFILE,keyfile):
 
 	return
 
+
 def NodeInstall(Node,node_cmd,action,LOGFILE,debug,keyfile):
 
 	my_cmurn = Node['cmurn']
@@ -1027,7 +1028,7 @@ def LAMP_sendmanifest(SLICEURN,manifest,LAMPCERT,SLICECRED_FOR_LAMP,LOGFILE,debu
 		check = out.index("data element(s) successfully replaced")
 		state = TRUE
 		write_to_log(LOGFILE,out,dontprinttoscreen,debug)
-		msg = "Sent Manifest to the LAMP UNIS Successfully\n"
+		msg = "Sent Manifest to the LAMP UNIS Successfully"
 	except ValueError:
 		state = FALSE
 		msg = ""
@@ -1046,7 +1047,7 @@ def LAMP_sendmanifest(SLICEURN,manifest,LAMPCERT,SLICECRED_FOR_LAMP,LOGFILE,debu
 
 	return state,msg
 
-def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,LAMPCERT,LOGFILE,keyfile,debug):
+def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,SLICEUUID,LAMPCERT,LOGFILE,keyfile,debug):
 
 	global EXP_NODE_tmppath
 	global INSTOOLS_repo_url
@@ -1060,9 +1061,11 @@ def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,LAMPCERT,LOGFI
 	proclist = []
 	#sudo install -D -g geniuser -o root -m 440 /tmp/lampcert.pem  /usr/local/etc/protogeni/ssl/
 
+	GNHOST = GN_Node['hostname']
+
 	#Install software on GN Node regardless
 	NODE_TYPE = "GN"
-	cmd = "cd "+EXP_NODE_tmppath+";sudo rm -rf ACTIVE_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/ACTIVE_SETUP.tgz;tar xzf ACTIVE_SETUP.tgz;sudo ./ACTIVE_SETUP.sh "+NODE_TYPE+" INSTALL "+SLICEURN+" "+USERURN
+	cmd = "cd "+EXP_NODE_tmppath+";sudo rm -rf ACTIVE_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/ACTIVE_SETUP.tgz;tar xzf ACTIVE_SETUP.tgz;sudo ./ACTIVE_SETUP.sh "+NODE_TYPE+" INSTALL "+SLICEURN+" "+USERURN+" "+GNHOST+" "+SLICEUUID
 	p = multiprocessing.Process(target=ActiveInstall,args=(GN_Node,cmd,cert_file,LOGFILE,debug,keyfile,))
 	proclist.append(p)
 	p.start()                                                                                                                      
@@ -1073,7 +1076,7 @@ def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,LAMPCERT,LOGFI
 			continue
 
 		NODE_TYPE = "MP"
-		cmd = "cd "+EXP_NODE_tmppath+";sudo rm -rf ACTIVE_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/ACTIVE_SETUP.tgz;tar xzf ACTIVE_SETUP.tgz;sudo ./ACTIVE_SETUP.sh "+NODE_TYPE+" INSTALL "+SLICEURN+" "+USERURN
+		cmd = "cd "+EXP_NODE_tmppath+";sudo rm -rf ACTIVE_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/ACTIVE_SETUP.tgz;tar xzf ACTIVE_SETUP.tgz;sudo ./ACTIVE_SETUP.sh "+NODE_TYPE+" INSTALL "+SLICEURN+" "+USERURN+" "+GNHOST+" "+SLICEUUID
 		#Install software on MP Nodes
 	        p = multiprocessing.Process(target=ActiveInstall,args=(Node,cmd,cert_file,LOGFILE,debug,keyfile,))
 		proclist.append(p)
@@ -1141,7 +1144,12 @@ def makeInstrumentizeProxy(lifetime,auth_uuid,LOGFILE,debug):
 	role = "slice_admin_for_%s" % auth_uuid.replace("-", "")
 
 	genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,PROXY_CERT,PROXY_KEY,"instrumentize",lifetime,passphrase)
-	genproxy.make_attribute_cert(CERTIFICATE,CERTIFICATE,PROXY_CERT,role,PROXY_ATTR,passphrase)
+	(result, msg) = genproxy.make_attribute_cert(CERTIFICATE,CERTIFICATE,PROXY_CERT,role,PROXY_ATTR,passphrase)
+	if not result:
+		PROXY_ATTR = None
+		write_to_log(LOGFILE,msg,printtoscreen,debug)
+		
+	return result
 
 def install_irods_Certs(GN_Nodes,keyfile,lifetime,LOGFILE,debug):
 	global passphrase
@@ -1258,8 +1266,15 @@ def install_MP_Certs(MP_Nodes,keyfile,lifetime,auth_uuid,LOGFILE,debug):
 def postDataToUNIS(key,cert,endpoint,data,LOGFILE,debug):
 	url = UNIS_URL+endpoint
 	o = urlparse.urlparse(url)
-	conn = httplib.HTTPSConnection(o.hostname, o.port, key, cert)
-	conn.request("POST", o.path, data)
+
+	try:
+		conn = httplib.HTTPSConnection(o.hostname, o.port, key, cert)
+		conn.request("POST", o.path, data)
+	except Exception as e:
+		msg = "Could not connect to UNIS: "+e.strerror
+		write_to_log(LOGFILE,msg,printtoscreen,debug)
+		return None
+
 	r = conn.getresponse()
 	data = r.read()
 	if r.status not in (200, 201):
