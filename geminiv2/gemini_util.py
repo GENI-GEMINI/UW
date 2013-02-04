@@ -47,7 +47,24 @@ import crypt
 import random
 import multiprocessing
 import paramiko
+import json
 import genproxy         # Import certificate generation routines
+
+UNIS_SCHEMAS = {
+    'networkresource': 'http://unis.incntre.iu.edu/schema/20120709/networkresource#',
+    'node': 'http://unis.incntre.iu.edu/schema/20120709/node#',
+    'domain': 'http://unis.incntre.iu.edu/schema/20120709/domain#',
+    'port': 'http://unis.incntre.iu.edu/schema/20120709/port#',
+    'link': 'http://unis.incntre.iu.edu/schema/20120709/link#',
+    'path': 'http://unis.incntre.iu.edu/schema/20120709/path#',
+    'network': 'http://unis.incntre.iu.edu/schema/20120709/network#',
+    'topology': 'http://unis.incntre.iu.edu/schema/20120709/topology#',
+    'service': 'http://unis.incntre.iu.edu/schema/20120709/service#',
+    'blipp': 'http://unis.incntre.iu.edu/schema/20120709/blipp#',
+    'metadata': 'http://unis.incntre.iu.edu/schema/20120709/metadata#',
+    'datum': 'http://unis.incntre.iu.edu/schema/20120709/datum#',
+    'data': 'http://unis.incntre.iu.edu/schema/20120709/data#'
+}
 
 #globals 
 ssh = 'ssh'
@@ -1261,6 +1278,27 @@ def install_MP_Certs(MP_Nodes,keyfile,lifetime,auth_uuid,LOGFILE,debug):
 	os.remove(mp_blipp_proxycert_file)
 	os.remove(mp_blipp_proxykey_file)
 	os.remove(mp_blipp_proxyder_file)
+
+def createBlippServiceEntries(MP_Nodes,GN_Node,UNISTopo,slice_uuid,LOGFILE,debug):
+	service_desc = dict()
+	service_desc.update({"$schema": UNIS_SCHEMAS["service"]})
+	service_desc.update({"serviceType": "ps:tools:blipp"})
+	service_desc.update({"description": "BLiPP Service"})
+	service_desc.update({"properties": {"geni": {"slice_uuid": slice_uuid},
+					    "configurations": {"ms_url": "https://"+GN_Node["hostname"]+":8888"}}})
+
+	for node in MP_Nodes:
+		cnode = None
+		for n in UNISTopo["nodes"]:
+			if n["name"] == node["nodeid"]:
+				cnode = n
+				break
+		
+		post_desc = service_desc
+		post_desc.update({"runningOn": {"href": UNIS_URL+"/nodes/"+cnode["id"],
+						"rel": "full"}})
+		post_str = json.dumps(post_desc)
+		postDataToUNIS(PROXY_KEY,PROXY_CERT,"/services",post_str,LOGFILE,debug)
 
 #POST some data to specified UNIS endpoints
 def postDataToUNIS(key,cert,endpoint,data,LOGFILE,debug):

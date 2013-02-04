@@ -420,6 +420,7 @@ else:
 pass
 
 manifest = {}
+unis_topology = {}
 #Stripped_slice_cred
 SLICECRED_FOR_LAMP = slicecred.replace('<?xml version="1.0" encoding="UTF-8" standalone="no"?>','',1).lstrip()
 for my_manager in managers:
@@ -516,6 +517,10 @@ for my_manager in managers:
 	gemini_util.install_MP_Certs(pruned_MP_Nodes,keyfile,slice_lifetime,slice_uuid,LOGFILE,debug)
 	gemini_util.install_irods_Certs(pruned_GN_Nodes,keyfile,slice_lifetime,LOGFILE,debug)
 
+	msg = "Creating BLiPP service configurations, sending to UNIS"
+	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	gemini_util.createBlippServiceEntries(pruned_MP_Nodes,pruned_GN_Nodes[0],unis_topology,slice_uuid,LOGFILE,debug)
+
 	msg = "Installing and configuring MP Nodes for Active Measurements"
 	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 	gemini_util.install_Active_measurements(pruned_MP_Nodes,pruned_GN_Nodes[0],USERURN,SLICEURN,slice_uuid,LAMPCERT,LOGFILE,keyfile,debug)
@@ -527,7 +532,6 @@ for my_manager in managers:
 		msg = msg + "\nERROR @ {"+my_manager+"} :: Problem unlocking\nYour Gemini configuration will not work\nPlease abort and contact GEMINI Dev Team for help\n"
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 		sys.exit(1)
-
 
 
 #if(len(managers_to_monitor) > 0):
