@@ -51,6 +51,9 @@ def make_proxy_cert(icert, ikey, pcert, pkey, CN, lifetime, PASSPHRASE):
         f.write(CSRCONF)
         f.close()
 
+    if not len(PASSPHRASE):
+        PASSPHRASE = "\n"
+
     cmd_subj = CMD_ISSUER_SUBJECT % icert    
     process = subprocess.Popen(cmd_subj, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     (out, err) = process.communicate()
@@ -120,8 +123,11 @@ def make_attribute_cert(icert, ikey, scert, role, outcert, PASSPHRASE):
     try:
         check = out.index("Key passphrase:")
     except ValueError:
-        msg = "Creddy could not create attribute certificate"
-        state = False
+        if not len(out) and not len(err):
+            pass
+        else:
+            msg = "Creddy could not create attribute certificate"
+            state = False
 
     try:
         os.remove(creddy_subject_cert)
