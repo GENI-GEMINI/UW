@@ -3,9 +3,9 @@ Brief Notes on Usage of gemini v2 scripts
 REQUIRED: INorder to run these scripts you will need the python PARAMIKO SSH library installed.
 For Ubuntu can be got from 
 
-apt-get install python-paramiko
+apt-get install python-paramiko 
 
-
+Other requirements are the installation of abac and creddy along with its dependencies as mentioned at http://abac.deterlab.net/browser/doc/INSTALL?rev=mei_rt2
 
 The first part in all the three scripts 1,2,3 mentioned below involve the following steps
 
