@@ -33,10 +33,6 @@ import gemini_util	# Import user defined routines
 from lxml import etree
 from decoder import RSpec3Decoder
 
-# add path for sfa imports
-sys.path.append("/opt/gcf/src")
-from sfa.trust.credential import Credential as GENICredential
-
 other_details = ""
 managers = []
 GN_Nodes = []
@@ -302,25 +298,27 @@ if (len(GN_Nodes) == 0):
         gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 	sys.exit(1)
 
-if(not FILE):
-	# Save all jsons to cache
-	cachefilename = gemini_util.getCacheFilename(CERT_ISSUER,username,gemini_util.SLICENAME)
-	gemini_util.ensure_dir(cachefilename)
-	f = open(cachefilename, 'w')
-	f.write(UserJSON.strip()+"\n")
-	f.write(SliceJSON.strip()+"\n")
-	f.write(NodesJSON.strip())
-	f.close
 
+#slicered = {}
 
+#if(FILE):
+#	msg = "Fetching Slice Credential from Cache"
+#	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+#	CredJSON= f.readline()
+#else:
 msg = "Fetching Slice Credential from the GeniDesktop Parser"
 gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-#slicered = {}
 CredJSON = gemini_util.getSliceCredentialFromParser(slice_crypt,user_crypt,LOGFILE,debug)
+
 try:
 	CredOBJ = json.loads(CredJSON)
 	gemini_util.write_to_log(LOGFILE,CredJSON,gemini_util.dontprinttoscreen,debug)
 except ValueError:
+	if(FILE):
+		#This assumes that the info in the cache is corrupted remove the cache and exit 
+		# So the next time its called again, fresh info from the parser is pulled
+		os.unlink(FILE)
+	
 	msg ="Slice Credential JSON Loading Error"
 	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 	sys.exit(1)
@@ -349,25 +347,18 @@ else:
 	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 	sys.exit(1)
 
-slice_uuid = ''
-#slice_lifetime = {}
-try:
-	cred = GENICredential(string=slicecred)
-	slice_uuid = cred.get_gid_object().get_uuid()
-	if not slice_uuid:
-		slice_uuid = hashlib.md5(cred.get_gid_object().get_urn()).hexdigest()
-		slice_uuid = str(uuid.UUID(slice_uuid))
-	else:
-		slice_uuid = str(uuid.UUID(int=slice_uuid))
-#        expiration = cred.get_expiration()
-#        now = datetime.datetime.now(expiration.tzinfo)
-#        td = expiration - now
-#        slice_lifetime = int(td.seconds + td.days * 24 * 3600)
-except Exception, msg:
-	print msg
-	msg = "Could not get slice UUID from slice credential"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-	sys.exit(1)
+
+if(not FILE):
+	# Save all jsons to cache
+	cachefilename = gemini_util.getCacheFilename(CERT_ISSUER,username,gemini_util.SLICENAME)
+	gemini_util.ensure_dir(cachefilename)
+	f = open(cachefilename, 'w')
+	f.write(UserJSON.strip()+"\n")
+	f.write(SliceJSON.strip()+"\n")
+	f.write(NodesJSON.strip()+"\n")
+	f.write(CredJSON.strip())
+	f.close
+
 
 #now = datetime.datetime.now()
 #future = now + datetime.timedelta(seconds=slice_lifetime)

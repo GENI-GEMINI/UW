@@ -288,6 +288,7 @@ msg = "***********************************\n"+\
 "***********************************\n"
 gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 
+
 if(not FILE):
 	# Save all jsons to cache
 	cachefilename = gemini_util.getCacheFilename(CERT_ISSUER,username,gemini_util.SLICENAME)

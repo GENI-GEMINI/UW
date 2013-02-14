@@ -271,22 +271,13 @@ def check_if_ready(Node,LOGFILE,keyfile,debug):
 	port = Node['login_port']
 	username = Node['login_username']
 	
-	ssh_options = getSSH_options(keyfile,port)
 	msg = "Checking if Node :\""+vid+"\" is configured and ready"
 	write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
-#	process = subprocess.Popen(ssh+ssh_options+username+'@'+hostname+' "'+cmd+filename+'"', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
-#	process.wait()
-#	ret_code = process.returncode
-#	write_to_processlog(process, LOGFILE)
 
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',cmd_filename,None,None)
 	write_to_processlog(out_ssh,err_ssh,LOGFILE)
 	if (ret_code == 0): # Means file exists
 		cmd = 'sudo cat '
-#		process = subprocess.Popen(ssh+ssh_options+username+'@'+hostname+' "'+cmd+filename+'"', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
-#		process.wait()
-#		(out,err) = process.communicate()
-
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',cmd+filename,None,None)
 		write_to_processlog(out_ssh,err_ssh,LOGFILE)
 		if(err_ssh):
@@ -320,7 +311,6 @@ def isOSSupported(Node,LOGFILE,keyfile,debug):
 	username = Node['login_username']
 	vid = Node['nodeid']
 
-#	ssh_options = getSSH_options(keyfile,port)
 
 	msg = "Checking if OS on Node : \""+vid+"\" is supported"
 	write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
@@ -337,20 +327,6 @@ def isOSSupported(Node,LOGFILE,keyfile,debug):
 	   return TRUE
 	else:
 	   return FALSE
-
-
-#	process = subprocess.Popen(ssh+ssh_options+username+'@'+hostname+' "'+pre_cmd+additional_cmd+'"', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
-#	process.wait()
-#	write_to_processlog(process, LOGFILE)
-	
-#	process = subprocess.Popen(ssh+ssh_options+username+'@'+hostname+' "'+cmd+SUPPORTED_FLAG+'"', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
-#	process.wait()
-#	ret_code = process.returncode
-#	write_to_processlog(process, LOGFILE)
-#	if (ret_code == 2):
-#	   return FALSE
- #  	elif(ret_code == 0):
-#	   return TRUE
 
 	return TRUE
 
@@ -402,18 +378,6 @@ def precheckNodes(GN_Node,MP_Nodes,keyfile,LOGFILE,debug):
 	if (ret_code != 0):
 		msg =  " (Node : "+vid+") "+err_ssh+"\nInstrumentization will terminate. Please make sure your experiment is running"
 		return FALSE,msg
-	# To fix sudo requiretty problem on fc10
-#	process = subprocess.Popen(ssh+' -t '+ssh_options+username+"@"+hostname+' "'+pre_cmd+' "', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
-#	process.wait()
-#	write_to_processlog(process, LOGFILE)
-	
-#	process = subprocess.Popen(ssh+' -tt '+ssh_options+username+'@'+hostname+' "'+cmd+'"', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
-#	process.wait()
-#	(out,err) = process.communicate()
-#	ret_code = process.returncode
-	#if (ret_code != 0):
-#		msg =  hostname+" at port "+port+" (Node : "+vid+") is not responding\nInstrumentization will terminate. Please make sure your experiment is running"+"\n"+err
-#		return FALSE,msg
 	if (not isOSSupported(GN_Node,LOGFILE, keyfile,debug)):
 		msg = "The Operating System on the Node \""+vid+"\" is not compatible with GEMINI"
 		return FALSE,msg
@@ -428,7 +392,6 @@ def precheckNodes(GN_Node,MP_Nodes,keyfile,LOGFILE,debug):
 		username = Node['login_username']
 		vid = Node['nodeid']
 
-		ssh_options = getSSH_options(keyfile,port)
 		pre_cmd ="rm -rf "+EXP_NODE_tmppath+"/sudoers.tgz;wget -P "+EXP_NODE_tmppath+" "+INSTOOLS_repo_url+"tarballs/sudoers.tgz;";
 		cmd = "sudo tar xzf "+EXP_NODE_tmppath+"/sudoers.tgz -C /"
 
@@ -441,18 +404,6 @@ def precheckNodes(GN_Node,MP_Nodes,keyfile,LOGFILE,debug):
 			msg =  hostname+" at port "+port+" (Node : "+vid+") is not responding\nInstrumentization will terminate. Please make sure your experiment is running"+"\n"+err_ssh
 			return FALSE,msg
 
-		# To fix sudo requiretty problem on fc10
-	#	process = subprocess.Popen(ssh+' -t '+ssh_options+username+"@"+hostname+' "'+pre_cmd+' "', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
-#		process.wait()
-#		write_to_processlog(process, LOGFILE)
-#		
-#		process = subprocess.Popen(ssh+' -tt '+ssh_options+username+'@'+hostname+' "'+cmd+'"', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
-#		process.wait()
-#		(out,err) = process.communicate()
-#		ret_code = process.returncode
-#		if (ret_code != 0):
-#			msg =  hostname+" at port "+port+" (Node : "+vid+") is not responding\nInstrumentization will terminate. Please make sure your experiment is running"+"\n"+err
-#			return FALSE,msg
 		if (not isOSSupported(Node, LOGFILE, keyfile,debug)):
 			msg = "The Operating System on the Node \""+vid+"\" is not compatible with GEMINI"
 			return FALSE,msg
@@ -550,11 +501,7 @@ def InstallGN_Passive(GN_Node,LOGFILE,keyfile,debug):
 
 	msg = "Starting the Global Node Software Intallation..."
 	write_to_log(LOGFILE,msg,printtoscreen,debug)
-	#process = subprocess.Popen(ssh+ssh_options+username+'@'+hostname+' "'+cmd+'"', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
 	post_cmd = "sudo touch /var/emulab/boot/isGemini;"
-#	process = subprocess.Popen(ssh+ssh_options+username+'@'+hostname+' "'+post_cmd+'"', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
-#	process.wait()
-#	write_to_processlog(process, LOGFILE)
 	
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh_GN',cmd,None,None)
 	write_to_processlog(out_ssh,err_ssh,LOGFILE)
@@ -578,9 +525,6 @@ def startStatscollection(GN_Node,LOGFILE,keyfile,debug):
 	cmd = 'sudo '+measure_scripts_path+'/initiate_stat_collection_without_credentials.sh' 
 	msg = "Starting the Data collection routines on the Measurement controller"
 	write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
-#	process = subprocess.Popen(ssh+ssh_options+username+'@'+hostname+' "'+cmd+'"', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
-#	process.wait()
-#	write_to_processlog(process, LOGFILE)
 	
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',cmd,None,None)
 	write_to_processlog(out_ssh,err_ssh,LOGFILE)
@@ -607,10 +551,6 @@ def dump_Expinfo_on_GN(GN_Node,userurn,email,instools_password,sliceurn,cmurn,dp
 	cmd = 'sudo '+measure_scripts_path+'/save_info.sh '+userurn+' '+cmurn+' '+sliceurn+' '+dpadmin_username+' '+dpadmin_passwd+' '+slice_crypt+' '+email+' '+instools_password+' '+hostname
 	msg = "Saving Exp info on the Global Node"
 	write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
-#	process = subprocess.Popen(ssh+ssh_options+username+'@'+hostname+' "'+pre_cmd+cmd+'"', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
-#	process.wait()
-#	ret_code = process.returncode
-#	write_to_processlog(process, LOGFILE)
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',pre_cmd,None,None)
 	write_to_processlog(out_ssh,err_ssh,LOGFILE)
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',cmd,None,None)
@@ -636,8 +576,6 @@ def initialize_Drupal_menu(GN_Node,LOGFILE ,keyfile,debug):
 	cmd = 'sudo '+measure_scripts_path+'/initialize_drupal.sh menu'
 	msg = "Initializing Drupal Menu creation for this Topology"
 	write_to_log(LOGFILE,msg,printtoscreen,debug)
-	#process = subprocess.Popen(ssh+ssh_options+username+'@'+hostname+' \''+cmd+' \'', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
-	#write_to_processlog(process, LOGFILE)
 	
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',cmd,None,None)
 	write_to_processlog(out_ssh,err_ssh,LOGFILE)
@@ -654,8 +592,6 @@ def generate_crypt_passwd(passwd,LOGFILE,debug):
 		salt  += random.choice(seq)
 		pass
 	mycrypt =  crypt.crypt(passwd,salt)
-#	msg = "Your passwd crypt = "+mycrypt
-#	write_to_log(LOGFILE,msg,printtoscreen,debug)
 	return mycrypt
 
 def getLockStatus(Node,LOGFILE,keyfile,debug):
@@ -671,12 +607,8 @@ def getLockStatus(Node,LOGFILE,keyfile,debug):
 	port = Node['login_port']
 	username = Node['login_username']
 	vid = Node['nodeid']
-#	ssh_options = getSSH_options(keyfile,port)
 	sendcmd = 'cat '+INSTOOLS_LOCK+';'
-#	process = subprocess.Popen(ssh+ssh_options+username+'@'+hostname+' \''+sendcmd+'\'', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
-#	(out,err) = process.communicate()
 
-#	return out.rstrip()
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',sendcmd,None,None)
 	return out_ssh.rstrip()
 	
@@ -763,9 +695,6 @@ def set_unset_LOCK(Node,flag,LOGFILE,keyfile,debug):
 	adata = f.name
 	f.write(flag)
 	f.flush()
-#	process = subprocess.Popen(scp+ssh_options+" -qr "+adata+" "+username+"@"+hostname+":"+EXP_NODE_tmppath, shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
-#	process.wait()
-#	write_to_processlog(process, LOGFILE)
 
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'scp',None,adata,'/tmp/'+os.path.basename(adata))
 	write_to_processlog(out_ssh,err_ssh,LOGFILE)
@@ -776,8 +705,6 @@ def set_unset_LOCK(Node,flag,LOGFILE,keyfile,debug):
 	f.close()
 	
 	sendcmd = 'sudo mv '+'/tmp/'+os.path.basename(adata)+' '+INSTOOLS_LOCK+';'
-#	process = subprocess.Popen(ssh+ssh_options+username+'@'+hostname+' \''+sendcmd+'\'', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
-#	write_to_processlog(process, LOGFILE)
 	
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',sendcmd,None,None)
 	write_to_processlog(out_ssh,err_ssh,LOGFILE)
@@ -805,26 +732,11 @@ def do_netflow_stuff(GN_Node,action, LOGFILE,keyfile ,debug):
 	
 	msg = action+" Netflow Setup for this Topology"
 	write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
-#	process = subprocess.Popen(ssh+ssh_options+username+'@'+hostname+' "'+cmd+" "+action+'"', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
-#	process.wait()
-#	write_to_processlog(process, LOGFILE)
 
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',cmd+" "+action,None,None)
 	write_to_processlog(out_ssh,err_ssh,LOGFILE)
 	
 	return
-
-# SSH/SCP option string
-def getSSH_options(kf,port):
-	opt = ' -o StrictHostKeyChecking=no '
-	if(kf):
-		if ( os.path.isfile(kf) ):
-			opt = opt+ '-i '+kf+' ' 
-	if(port):
-			opt = opt+'-o Port='+port+' ' 
-	
-	return opt
-
 
 #
 # Call php script on MC to create the drupal account
@@ -843,10 +755,6 @@ def	drupal_account_create(GN_Node,LOGFILE,keyfile,debug):
 	pre_cmd = 'sudo wget -P /var/www/html/drupal "'+INSTOOLS_repo_url+'scripts/createUser.php.txt";sudo mv /var/www/html/drupal/createUser.php.txt /var/www/html/drupal/createUser.php ;sudo chmod +x /var/www/html/drupal/createUser.php;sudo chgrp nobody /var/www/html/drupal/createUser.php;'
 	cmd = 'sudo '+measure_scripts_path+'/initialize_drupal.sh account;'
 	post_cmd = 'sudo rm -rf /var/www/html/drupal/createUser.php;'
-
-#	process = subprocess.Popen(ssh+ssh_options+username+'@'+hostname+' \''+pre_cmd+cmd+post_cmd+'\'',shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
-#	process.wait()
-#	write_to_processlog(process, LOGFILE)
 
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',pre_cmd+cmd+post_cmd,None,None)
 	write_to_processlog(out_ssh,err_ssh,LOGFILE)
@@ -870,9 +778,6 @@ def	update_Drupaladmin_acctinfo(GN_Node,LOGFILE,keyfile,debug):
 
 	msg = "Updating the drupal Admin account info"
 	write_to_log(LOGFILE,msg,printtoscreen,debug)
-#	process = subprocess.Popen(ssh+ssh_options+username+'@'+hostname+' \''+cmd+'\'',shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
-#	process.wait()
-#	write_to_processlog(process, LOGFILE)
 	
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',cmd,None,None)
 	write_to_processlog(out_ssh,err_ssh,LOGFILE)
@@ -890,8 +795,8 @@ def	vnc_passwd_create(MP_Nodes,GN_Node,LOGFILE,keyfile,debug):
 	
 	node_list = ""
 	for Node in MP_Nodes:
-#		if (nodes_sliver_urns[node_sliver_urn]["active"]["enable"] != 'yes'):
-#			continue
+		if (Node['gemini_node_services_passive']["enable"] != 'yes'):
+			continue
 		node_list = node_list+" "+Node['hostname']
 
 	my_cmurn = GN_Node['cmurn']
@@ -905,9 +810,6 @@ def	vnc_passwd_create(MP_Nodes,GN_Node,LOGFILE,keyfile,debug):
 
 	msg = "Setting up VNC Passwd file from MC and Experimental machines"
 	write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
-#	process = subprocess.Popen(ssh+ssh_options+username+'@'+hostname+' \''+mc_cmd+'\'',shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
-#	process.wait()
-#	write_to_processlog(process, LOGFILE)
 	
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',mc_cmd,None,None)
 	write_to_processlog(out_ssh,err_ssh,LOGFILE)
@@ -945,60 +847,12 @@ def ensure_dir(f):
 	if not os.path.exists(d):
 		os.makedirs(d)
 
-# Add node location to the manifest
-def addNodeLocation(manifest_dom,version,CM_URN,CM_Resources_location,LOGFILE,debug):
-
-
-#	manifest_dom = parseString(manifest)
-	Manifest_Nodes = manifest_dom.getElementsByTagName('node')
-	manifest_node_count = Manifest_Nodes.length
-	for i in range(0,manifest_node_count):
-		cm_urn = get_cm_urn_value(version,Manifest_Nodes.item(i))
-		if (cm_urn == CM_URN):
-			urn = get_component_urn_value(version,Manifest_Nodes.item(i))
-			location_tag = Manifest_Nodes.item(i).getElementsByTagName('node')
-			if(len(location_tag) == 0):
-				try:
-					Clone = CM_Resources_location[urn].cloneNode(True)
-					Manifest_Nodes.item(i).appendChild(Clone)
-				except KeyError:
-					(node_urn,pcvm) = urn.rsplit("+",1)
-					(pcname,junk) = pcvm.replace('pcvm','pc').split('-',1)
-					Clone = CM_Resources_location[node_urn+"+"+pcname].cloneNode(True)
-					Manifest_Nodes.item(i).appendChild(Clone)
-				pass
-			pass
-		pass
-	return manifest_dom.toxml()
-
-# Get the version of Rspec being userd
-def getRspecVersion(rspec_dom):
-		
-	rspec_tag = rspec_dom.getElementsByTagName("rspec").item(0)
-	(junk,rspec_version) = rspec_tag.getAttribute("xmlns").rsplit("/",1)
-	if (float(rspec_version) < 2):
-		rspec_version = 1
-	return int(rspec_version)
-
- 
 # The characters to make up the random password
 chars = string.ascii_letters + string.digits
 def random_password():
 # Create a password of random length between 8 and 16
 #   characters long, made up of numbers and letters.
 	return "".join(random.choice(chars) for x in range(random.randint(8, 16)))
-
-
-# Translate CM URI to generic URI
-def get_AM_URI(CM_URI):
-
-	if CM_URI[-2:] == "cm":
-		AM_URI = CM_URI[:-3]
-	elif CM_URI[-4:] == "cmv2":
-		AM_URI = CM_URI[:-5]
-	pass
-
-	return AM_URI
 
 
 # CALL LAMP python script to send MANIFEST
@@ -1120,13 +974,8 @@ def ActiveInstall(Node,node_cmd,cert_file,LOGFILE,debug,keyfile):
 	username = Node['login_username']
 	vid = Node['nodeid']
 
-	ssh_options = getSSH_options(keyfile,port)
-
 	msg = "Placing the LAMP Cert on Node:\""+vid+"\" to allow it to complete setup"
 	write_to_log(LOGFILE,msg,printtoscreen,debug)
-#	process = subprocess.Popen(scp+ssh_options+" -qr "+cert_file+" "+username+"@"+hostname+":"+EXP_NODE_tmppath+"/", shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
-#	process.wait()
-#	write_to_processlog(process, LOGFILE)
 
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'scp',None,cert_file,'/tmp/'+os.path.basename(cert_file))
 	write_to_processlog(out_ssh,err_ssh,LOGFILE)
@@ -1136,10 +985,6 @@ def ActiveInstall(Node,node_cmd,cert_file,LOGFILE,debug,keyfile):
 	msg = "Running Active Services Install Scripts on Node: \""+vid+"\""
 	write_to_log(LOGFILE,msg,printtoscreen,debug)
 	
-#	process = subprocess.Popen(ssh+ssh_options+username+"@"+hostname+' "'+pre_cmd+node_cmd+' "', shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,)
-#	process.wait()
-#	write_to_processlog(process, LOGFILE)
-
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',pre_cmd+node_cmd,None,None)
 	write_to_processlog(out_ssh,err_ssh,LOGFILE)
 
@@ -1325,7 +1170,6 @@ def postDataToUNIS(key,cert,endpoint,data,LOGFILE,debug):
 #Download Manifest from the GeniDesktop Parser Service after identifying your self
 def downloadManifestFromParser(slice_crypt,cmurn,LOGFILE,debug):
 	post_data = urllib.urlencode({'slice_crypt':slice_crypt, 'urn':cmurn})
-	#post_response = urllib.urlopen('https://parser.netlab.uky.edu/downloadManifest.php',post_data)
 	url = 'https://parser.netlab.uky.edu/downloadManifest.php'
 	req = urllib2.Request(url,post_data)
 	post_response = urllib2.urlopen(req)
@@ -1342,7 +1186,6 @@ def downloadManifestFromParser(slice_crypt,cmurn,LOGFILE,debug):
 def getSliceCredentialFromParser(slice_crypt,user_crypt,LOGFILE,debug):
 
 	post_data = urllib.urlencode({'slice_crypt':slice_crypt, 'user_crypt':user_crypt})
-	#post_response = urllib.urlopen('https://parser.netlab.uky.edu/getUserinfo.php',post_data)
 	url = 'https://parser.netlab.uky.edu/getSliceCred.php'
 	req = urllib2.Request(url,post_data)
 	post_response = urllib2.urlopen(req)
@@ -1354,7 +1197,6 @@ def getSliceCredentialFromParser(slice_crypt,user_crypt,LOGFILE,debug):
 def getUserinfoFromParser(cert,passphrase,LOGFILE,debug):
 
 	post_data = urllib.urlencode({'cert':cert, 'passphrase':passphrase})
-	#post_response = urllib.urlopen('https://parser.netlab.uky.edu/getUserinfo.php',post_data)
 	url = 'https://parser.netlab.uky.edu/getUserinfo.php'
 	req = urllib2.Request(url,post_data)
 	post_response = urllib2.urlopen(req)
@@ -1366,7 +1208,6 @@ def getUserinfoFromParser(cert,passphrase,LOGFILE,debug):
 def getSliceinfoFromParser(user_crypt,LOGFILE,debug):
 
 	post_data = urllib.urlencode({'user_crypt':user_crypt})
-	#post_response = urllib.urlopen('https://parser.netlab.uky.edu/getSliceinfo.php',post_data)
 	url = 'https://parser.netlab.uky.edu/getSliceinfo.php'
 	req = urllib2.Request(url,post_data)
 	post_response = urllib2.urlopen(req)
@@ -1376,7 +1217,6 @@ def getSliceinfoFromParser(user_crypt,LOGFILE,debug):
 def getJSONManifestFromParser(slice_crypt,slicename,api,force_refresh,LOGFILE,debug):
 	
 	post_data = urllib.urlencode({'key':slice_crypt,'slice_name':slicename,'api':api,'force_refresh':force_refresh})
-#	post_response = urllib.urlopen('https://parser.netlab.uky.edu/parseManifest.php',post_data)
 	url = 'https://parser.netlab.uky.edu/parseManifest.php'
 	req = urllib2.Request(url,post_data)
 	post_response = urllib2.urlopen(req)
@@ -1448,6 +1288,11 @@ def sshConnection(hostname,port,username,key_filename,what_to_do,cmd=None,localF
 		except socket.error:
 			serr = "Hostname "+hostname+" is not responding at port "+port
 			ret_code = -1
+		except AssertionError:
+			print "Some Assert error. Will try again in 5 seconds"
+			time.sleep(5)
+			continue
+			
 		if(tries > 16):
 			ssh.close()
 			print "tries is done"
