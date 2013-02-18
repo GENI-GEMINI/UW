@@ -891,7 +891,7 @@ def LAMP_sendmanifest(SLICEURN,manifest,LAMPCERT,SLICECRED_FOR_LAMP,LOGFILE,debu
 
 	msg = ""
 
-	process = subprocess.Popen("./lamp-sendmanifest.py "+manifest_file+" "+SLICEURN+" "+cred_file, shell=True,stdout=subprocess.PIPE,stdin=subprocess.PIPE,stderr=subprocess.PIPE)
+	process = subprocess.Popen(os.path.dirname(__file__)+"/lamp-sendmanifest.py "+manifest_file+" "+SLICEURN+" "+cred_file, shell=True,stdout=subprocess.PIPE,stdin=subprocess.PIPE,stderr=subprocess.PIPE)
 	(out,err) = process.communicate()
 	process.wait()
 	write_to_log(LOGFILE,out+"\n"+err,dontprinttoscreen,debug)

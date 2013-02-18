@@ -1,12 +1,64 @@
-Brief Notes on Usage of gemini v2 scripts
-=========================================
-REQUIRED: INorder to run these scripts you will need the python PARAMIKO SSH library installed.
+PRE-Requisites
+==============
+REQUIRED: Inorder to run these scripts you will need the python PARAMIKO SSH library installed.
 For Ubuntu can be got from 
 
 apt-get install python-paramiko 
 
+===============================
+INSTALL ABAC with Creddy
+------------------------
+For Ubuntu the following packagaes are needed
+
+apt-get install python-m2crypto python-dateutil python-openssl libxmlsec1 xmlsec1 libxmlsec1-openssl libxmlsec1-dev openjdk-7-jdk git  python-M2Crypto python-paramiko sharutils ntp libncurses-dev build-essential bison flex python-lxm
+
 Other requirements are the installation of abac and creddy along with its dependencies as mentioned at http://abac.deterlab.net/browser/doc/INSTALL?rev=mei_rt2
 
+
+You need to build strongswan and Yap as dependencies.
+
+http://abac.deterlab.net/browser/doc/INSTALL?rev=mei_rt2
+
+I use the latest tarball:
+
+http://abac.deterlab.net/src/abac-0.2.3.tgz
+
+After the configure step and before make 
+
+In <abac_src>/libabac/abac_util.c line 308
+
+Change
+
+struct cb_opts c_opts = { 1, 0, 3, "Key passphrase:" };
+
+to
+
+struct cb_opts c_opts = { 1, 1, 3, "Key passphrase:" };
+
+make && make install
+
+All this does is prevent creddy from trying to turn off local terminal
+echo.  It uses tc{get,set}attr() linux call to try to do so and it
+fails when fd 0 refers to the pipe passed in through Popen. 
+
+Finally, you need:
+
+$ cat /usr/local/etc/strongswan.conf
+libstrongswan {
+
+        x509 {
+                enforce_critical = no
+        }
+
+} 
+
+
+
+
+=======================================
+
+Brief Notes on Usage of gemini v2 scripts
+=========================================
 The first part in all the three scripts 1,2,3 mentioned below involve the following steps
 
 a) Send the GeniDesktop Parser (PHP Call - getUserInfo() ) user cert and passphrase to validate user. This returns user info details and a unique user_crypt returned in JSON
