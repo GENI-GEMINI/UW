@@ -47,6 +47,7 @@ import crypt
 import random
 import multiprocessing
 import paramiko
+#from OpenSSL import SSL
 import json
 import genproxy         # Import certificate generation routines
 
@@ -100,6 +101,18 @@ PID = str(os.getpid())
 PROXY_CERT      = None
 PROXY_KEY       = None
 PROXY_ATTR      = None
+
+## unfortunately OpenSSL.SSL doesn't implement SSL.makefile() needed by httplib.HTTPResponse
+## Python 3.3+ is working to fix this and also has password support in ssl.wrap_socket
+#class BetterHTTPSConnection(httplib.HTTPSConnection):
+#    def connect(self):
+#        context = SSL.Context(SSL.SSLv23_METHOD)
+#        context.set_passwd_cb(lambda *unused: passphrase)
+#        context.use_certificate_file(CERTIFICATE)
+#        context.use_privatekey_file(CERTIFICATE)
+#        #context.set_verify(SSL.VERIFY_NONE, verify)
+#        self.sock = SSL.Connection(context, socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+#	 self.sock.connect((self.host, self.port))
 
 def print_timing(func):
     def wrapper(*arg):
@@ -1108,7 +1121,7 @@ def install_MP_Certs(MP_Nodes,keyfile,lifetime,auth_uuid,LOGFILE,debug):
 		f = open(mp_blipp_proxyder_file)
 		postDataToUNIS(mp_blipp_proxykey_file,mp_blipp_proxycert_file,"/credentials/geniuser",f,LOGFILE,debug)
 		f.close()
-
+	
 		# scp these via sshConnection...
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'scp',None,mp_blipp_proxycert_file,'/tmp/'+os.path.basename(mp_blipp_proxycert_file))
 		write_to_processlog(out_ssh,err_ssh,LOGFILE)
@@ -1145,6 +1158,14 @@ def createBlippServiceEntries(MP_Nodes,GN_Node,UNISTopo,slice_uuid,LOGFILE,debug
 		post_str = json.dumps(post_desc)
 		postDataToUNIS(PROXY_KEY,PROXY_CERT,"/services",post_str,LOGFILE,debug)
 
+def getUnencryptedKeyfile(LOGFILE,debug):
+	TKF = tempfile.NamedTemporaryFile(delete=False)
+	cmd_rsa = "openssl rsa -passin stdin -in %s -out %s" % (CERTIFICATE, TKF.name)
+	process = subprocess.Popen(cmd_rsa, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+	(out, err) = process.communicate(input=passphrase)
+	TKF.close()
+	return TKF.name
+
 #POST some data to specified UNIS endpoints
 def postDataToUNIS(key,cert,endpoint,data,LOGFILE,debug):
 	url = UNIS_URL+endpoint
@@ -1154,7 +1175,7 @@ def postDataToUNIS(key,cert,endpoint,data,LOGFILE,debug):
 		conn = httplib.HTTPSConnection(o.hostname, o.port, key, cert)
 		conn.request("POST", o.path, data)
 	except Exception as e:
-		msg = "Could not connect to UNIS: "+e.strerror
+		msg = "Could not connect to UNIS: %s" % e
 		write_to_log(LOGFILE,msg,printtoscreen,debug)
 		return None
 

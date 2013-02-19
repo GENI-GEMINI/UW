@@ -375,12 +375,16 @@ if not (gemini_util.PROXY_ATTR):
 	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 	sys.exit(1)
 
+## temporary hack to write out an unencrypted keyfile for the slice registration call to UNIS
+TEMP_KEYFILE = gemini_util.getUnencryptedKeyfile(LOGFILE,debug)
 msg="Registering slice credential with Global UNIS"
 gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-res1 = gemini_util.postDataToUNIS(gemini_util.CERTIFICATE,gemini_util.CERTIFICATE,"/credentials/genislice",slicecred,LOGFILE,debug)
+res1 = gemini_util.postDataToUNIS(TEMP_KEYFILE,gemini_util.CERTIFICATE,"/credentials/genislice",slicecred,LOGFILE,debug)
+os.remove(TEMP_KEYFILE)
 f = open(gemini_util.PROXY_ATTR)
 res2 = gemini_util.postDataToUNIS(gemini_util.PROXY_KEY,gemini_util.PROXY_CERT,"/credentials/geniuser",f,LOGFILE,debug)
 f.close()
+os.remove(gemini_util.PROXY_ATTR)
 if res1 or res2 is None:
 	msg="Failed to register slice credential"
 	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
@@ -470,7 +474,6 @@ for my_manager in managers:
 	else:
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 
-
 	# This lock will just set a flag on the GN to indicate the beginning of the configuration process
 	(status,msg) = gemini_util.lock_unlock_MC(pruned_GN_Nodes[0],"instrument_lock",LOGFILE,keyfile,debug)
 	if(not status):
@@ -485,7 +488,6 @@ for my_manager in managers:
 		msg = msg + "\nERROR @ {"+my_manager+"} :: Problem updating  Drupal Admin AccInfo\nYour Gemini configuration will not work\nPlease abort and contact GEMINI Dev Team for help\n"
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 		sys.exit(1)
-
 
 	msg = "Installing and configuring MP Nodes for Passive Measurements"
 	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
@@ -525,9 +527,11 @@ for my_manager in managers:
 		sys.exit(1)
 
 
+os.remove(gemini_util.PROXY_CERT)
+os.remove(gemini_util.PROXY_KEY)
+
 #if(len(managers_to_monitor) > 0):
         # Provide user information needed to login to GEMINI PORTAL
 #        msg = "Visit https://geminiportal.netlab.uky.edu and fill out the requested information for a complete View of your Network Topology. \nYour Portal login details are\nUsername : "+username+"\nPassword : "+password+" \nEmail Address : "+email_id+"\nCertificate Issuer      : "+CERT_ISSUER+"\nSlicename : "+SLICENAME+"\n"
 msg = "Gemini Instrumentize Complete\n Go to the GeniDesktop to login"
 gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-#        pass
