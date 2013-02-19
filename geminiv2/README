@@ -5,6 +5,9 @@ For Ubuntu can be got from
 
 apt-get install python-paramiko 
 
+lxml is required for decoder
+apt-get install python-lxml
+
 ===============================
 INSTALL ABAC with Creddy
 ------------------------
