@@ -7,14 +7,8 @@ import getopt
 import xml.dom.minidom as dom
 from httplib import HTTPConnection, HTTPSConnection
 
-cert_file = os.environ['HOME'] + "/.ssl/emulab.pem"
-key_file = os.environ['HOME'] + "/.ssl/emulab.pem"
-
-if "HTTPS_CERT_FILE" in os.environ:
-    cert_file = os.environ["HTTPS_CERT_FILE"]
-
-if "HTTPS_KEY_FILE" in os.environ:
-    key_file = os.environ["HTTPS_KEY_FILE"]
+cert_file = ""
+key_file = ""
 
 class SimpleClient:
     """
@@ -568,16 +562,21 @@ class Usage(Exception):
         self.msg = msg
 
 def main(argv=None):
+    global cert_file
+    global key_file
+
     if argv is None:
         argv = sys.argv
     try:
         try:
             opts, args = getopt.getopt(argv[1:], "h", ["help"])
-            if opts or (len(args) != 2 and len(args) != 3):
+            if opts or (len(args) != 3 and len(args) != 4):
                 raise Usage('Not enough arguments')
             
             manifest_xml = args[0]
             slice_id = args[1]
+            cert_file = args[2]
+            key_file = args[2]
 
             try:
                 open(manifest_xml, 'r')
@@ -588,10 +587,10 @@ def main(argv=None):
                 raise Usage('Invalid slice urn')
             
             credential_xml = None
-            if len(args) == 3:
+            if len(args) == 4:
                 try:
-                    open(args[2], 'r')
-                    credential_xml = args[2]
+                    open(args[3], 'r')
+                    credential_xml = args[3]
                 except IOError, msg:
                     raise Usage('Cannot open credential: ' + msg)
 
@@ -637,7 +636,7 @@ def main(argv=None):
         
     except Usage, err:
         print >>sys.stderr, err.msg
-        print >>sys.stderr, "Usage: <manifest> <slice_urn> [credential]"
+        print >>sys.stderr, "Usage: <manifest> <slice_urn> <Path to Lamp Cert file> [credential]"
         return 2
     
 ##################################

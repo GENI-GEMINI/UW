@@ -41,6 +41,7 @@ debug           = 0
 keyfile = ""
 force_refresh = '1'
 FILE = ''
+DONE=0
 
 
 def Usage():
@@ -525,13 +526,11 @@ for my_manager in managers:
 		msg = msg + "\nERROR @ {"+my_manager+"} :: Problem unlocking\nYour Gemini configuration will not work\nPlease abort and contact GEMINI Dev Team for help\n"
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 		sys.exit(1)
+	DONE=1
 
 
 os.remove(gemini_util.PROXY_CERT)
 os.remove(gemini_util.PROXY_KEY)
-
-#if(len(managers_to_monitor) > 0):
-        # Provide user information needed to login to GEMINI PORTAL
-#        msg = "Visit https://geminiportal.netlab.uky.edu and fill out the requested information for a complete View of your Network Topology. \nYour Portal login details are\nUsername : "+username+"\nPassword : "+password+" \nEmail Address : "+email_id+"\nCertificate Issuer      : "+CERT_ISSUER+"\nSlicename : "+SLICENAME+"\n"
-msg = "Gemini Instrumentize Complete\n Go to the GeniDesktop to login"
-gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+if(DONE):
+	msg = "Gemini Instrumentize Complete\n Go to the GeniDesktop to login"
+	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)

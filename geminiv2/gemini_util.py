@@ -887,15 +887,6 @@ def LAMP_sendmanifest(SLICEURN,manifest,LAMPCERT,SLICECRED_FOR_LAMP,LOGFILE,debu
 		lpcert_file = lp.name
 		lp.write(LAMPCERT)
 		lp.flush()
-	
-		#Backup environ variables
-		if "HTTPS_CERT_FILE" in os.environ:
-			old_HTTPS_CERT_FILE = os.environ["HTTPS_CERT_FILE"]
-		if "HTTPS_KEY_FILE" in os.environ:
-			old_HTTPS_KEY_FILE = os.environ["HTTPS_KEY_FILE"]
-		# LAMP Workaround
-		os.environ["HTTPS_CERT_FILE"] = lpcert_file
-		os.environ["HTTPS_KEY_FILE"] = lpcert_file
 	else:
 		cred = tempfile.NamedTemporaryFile()
 		cred_file = cred.name
@@ -904,7 +895,7 @@ def LAMP_sendmanifest(SLICEURN,manifest,LAMPCERT,SLICECRED_FOR_LAMP,LOGFILE,debu
 
 	msg = ""
 
-	process = subprocess.Popen(os.path.dirname(__file__)+"/lamp-sendmanifest.py "+manifest_file+" "+SLICEURN+" "+cred_file, shell=True,stdout=subprocess.PIPE,stdin=subprocess.PIPE,stderr=subprocess.PIPE)
+	process = subprocess.Popen(os.path.dirname(__file__)+"/lamp-sendmanifest.py "+manifest_file+" "+SLICEURN+" "+lpcert_file+" "+cred_file, shell=True,stdout=subprocess.PIPE,stdin=subprocess.PIPE,stderr=subprocess.PIPE)
 	(out,err) = process.communicate()
 	process.wait()
 	write_to_log(LOGFILE,out+"\n"+err,dontprinttoscreen,debug)
@@ -920,15 +911,8 @@ def LAMP_sendmanifest(SLICEURN,manifest,LAMPCERT,SLICECRED_FOR_LAMP,LOGFILE,debu
 	f.close
 	if(LAMPCERT):
 		lp.close
-
-		# Restore old variables
-		if(old_HTTPS_CERT_FILE != ""):
-			os.environ["HTTPS_CERT_FILE"] = old_HTTPS_CERT_FILE
-		if(old_HTTPS_KEY_FILE != ""):
-			os.environ["HTTPS_KEY_FILE"] = old_HTTPS_KEY_FILE
 	else:
 		cred.close
-
 	return state,msg
 
 def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,SLICEUUID,LAMPCERT,LOGFILE,keyfile,debug):
