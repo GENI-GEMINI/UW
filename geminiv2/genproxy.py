@@ -5,12 +5,10 @@ import sys
 import shutil
 import subprocess
 import gemini_util
+import tempfile
 
+# writes once, doesn't change
 CSRCONF_FILENAME="/tmp/csr.conf"
-TEMP_REQFILE="proxy.csr"
-
-USER_CERT_FILE="/tmp/user_cert.pem"
-USER_KEY_FILE="/tmp/user_key.pem"
 
 CSRCONF = '''
 [ req ]
@@ -44,6 +42,8 @@ cd /tmp/; creddy --attribute --issuer %s --key %s --role %s --subject-cert %s --
 '''
 
 def make_proxy_cert(icert, ikey, pcert, pkey, CN, lifetime, PASSPHRASE):
+    TEMP_REQFILE = tempfile.NamedTemporaryFile(delete=True)
+
     try:
         with open(CSRCONF_FILENAME) as f: pass
     except IOError as e:
@@ -59,11 +59,11 @@ def make_proxy_cert(icert, ikey, pcert, pkey, CN, lifetime, PASSPHRASE):
     (out, err) = process.communicate()
     issuer_subject = out.split("subject= ")[1].strip('\n')
 
-    cmd_req = CMD_CERT_REQUEST % (CSRCONF_FILENAME, pkey, TEMP_REQFILE, issuer_subject, CN)
+    cmd_req = CMD_CERT_REQUEST % (CSRCONF_FILENAME, pkey, TEMP_REQFILE.name, issuer_subject, CN)
     process = subprocess.Popen(cmd_req, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     (out, err) = process.communicate()
     
-    cmd_proxy = CMD_CREATE_PROXY % (TEMP_REQFILE, lifetime, pcert, icert, ikey, CSRCONF_FILENAME)
+    cmd_proxy = CMD_CREATE_PROXY % (TEMP_REQFILE.name, lifetime, pcert, icert, ikey, CSRCONF_FILENAME)
     process = subprocess.Popen(cmd_proxy, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     (out, err) = process.communicate(input=PASSPHRASE)
 
@@ -81,10 +81,14 @@ def make_proxy_cert(icert, ikey, pcert, pkey, CN, lifetime, PASSPHRASE):
         print "Could not open issuer certificate!"
         sys.exit(1)
 
-    os.remove(TEMP_REQFILE)
+    TEMP_REQFILE.close()
 
 
 def make_attribute_cert(icert, ikey, scert, role, outcert, PASSPHRASE):
+
+    USER_CERT_FILE=tempfile.NamedTemporaryFile(delete=False, suffix=".pem")
+    USER_KEY_FILE=tempfile.NamedTemporaryFile(delete=False, suffix=".pem")
+
     state = True
     msg = None
     # creddy *wants* subject cert with _ID.pem ending!
@@ -100,18 +104,17 @@ def make_attribute_cert(icert, ikey, scert, role, outcert, PASSPHRASE):
         with open(icert) as f:
             line = f.readline()
             if "BEGIN RSA PRIVATE KEY" in line:
-                d = open(USER_KEY_FILE, 'w')
-                d.write(line)
+                USER_KEY_FILE.write(line)
                 for line in f:
-                    d.write(line)
+                    USER_KEY_FILE.write(line)
                     if "END RSA PRIVATE KEY" in line:
-                        d.close()
-                        d = open(USER_CERT_FILE, 'w')
+                        USER_KEY_FILE.close()
                         for line in f:
-                            d.write(line)
-                        d.close()
-                icert = USER_CERT_FILE
-                ikey = USER_KEY_FILE
+                            USER_CERT_FILE.write(line)
+                        USER_CERT_FILE.close()
+                icert = USER_CERT_FILE.name
+                ikey = USER_KEY_FILE.name
+                f.close()
     except IOError as e:
         print "Could not open issuer certificate"
         sys.exit(1)
@@ -131,8 +134,8 @@ def make_attribute_cert(icert, ikey, scert, role, outcert, PASSPHRASE):
 
     try:
         os.remove(creddy_subject_cert)
-        os.remove(USER_CERT_FILE)
-        os.remove(USER_KEY_FILE)
+        os.remove(USER_CERT_FILE.name)
+        os.remove(USER_KEY_FILE.name)
     except Exception:
         pass
         
