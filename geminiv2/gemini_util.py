@@ -1072,7 +1072,7 @@ def install_GN_Certs(GN_Nodes,keyfile,lifetime,auth_uuid,LOGFILE,debug):
 		write_to_processlog(out_ssh,err_ssh,LOGFILE)
 
 	
-		cmd = 'sudo install -D /tmp/'+os.path.basename(gn_ms_proxycert_file)+' /usr/local/etc/certs/gn_cert.pem -o root -g root -m 600;sudo install -D /tmp/'+os.path.basename(gn_ms_proxykey_file)+' /usr/local/etc/certs/gn_key.pem -o root -g root -m 600;'
+		cmd = 'sudo install -D /tmp/'+os.path.basename(gn_ms_proxycert_file)+' /usr/local/etc/certs/gn_cert.pem -o root -g root -m 600;sudo install -D /tmp/'+os.path.basename(gn_ms_proxykey_file)+' /usr/local/etc/certs/gn_key.pem -o root -g root -m 600;sudo cat /usr/local/etc/certs/gn_cert.pem /usr/local/etc/certs/gn_key.pem >/tmp/unis-proxy.pem;sudo install -D /tmp/unis-proxy.pem /usr/local/etc/certs/unis-proxy.pem -o nobody -g nobody -m 750;sudo chmod 755 /usr/local/etc/certs;'
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',cmd,None,None)
 		write_to_processlog(out_ssh,err_ssh,LOGFILE)
 
