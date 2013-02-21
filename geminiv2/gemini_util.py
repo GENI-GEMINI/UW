@@ -102,6 +102,14 @@ PROXY_CERT      = None
 PROXY_KEY       = None
 PROXY_ATTR      = None
 
+BASE_CERT_DIR   = "/usr/local/etc/certs"
+GN_PROXY_CERT   = BASE_CERT_DIR+'/gn_cert.pem'
+GN_PROXY_KEY    = BASE_CERT_DIR+'/gn_key.pem'
+GN_IRODS_CERT   = BASE_CERT_DIR+'/irods-proxy.pem'
+GN_UNIS_CERT    = BASE_CERT_DIR+'/unis-proxy.pem'
+MP_PROXY_CERT   = BASE_CERT_DIR+'/mp_cert.pem'
+MP_PROXY_KEY    = BASE_CERT_DIR+'/mp_key.pem'
+
 ## unfortunately OpenSSL.SSL doesn't implement SSL.makefile() needed by httplib.HTTPResponse
 ## Python 3.3+ is working to fix this and also has password support in ssl.wrap_socket
 #class BetterHTTPSConnection(httplib.HTTPSConnection):
@@ -1032,7 +1040,7 @@ def install_irods_Certs(GN_Nodes,keyfile,lifetime,LOGFILE,debug):
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'scp',None,proxycert_file,'/tmp/'+os.path.basename(proxycert_file))
 		write_to_processlog(out_ssh,err_ssh,LOGFILE)
 	
-		cmd = 'sudo install -D /tmp/'+os.path.basename(proxycert_file)+' /usr/local/etc/certs/irods-proxy.pem -o root -g root -m 600;'
+		cmd = 'sudo install -D /tmp/'+os.path.basename(proxycert_file)+' '+GN_IRODS_CERT+' -o root -g root -m 600;'
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',cmd,None,None)
 		write_to_processlog(out_ssh,err_ssh,LOGFILE)
 
@@ -1071,8 +1079,8 @@ def install_GN_Certs(GN_Nodes,keyfile,lifetime,auth_uuid,LOGFILE,debug):
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'scp',None,gn_ms_proxykey_file,'/tmp/'+os.path.basename(gn_ms_proxykey_file))
 		write_to_processlog(out_ssh,err_ssh,LOGFILE)
 
-	
-		cmd = 'sudo install -D /tmp/'+os.path.basename(gn_ms_proxycert_file)+' /usr/local/etc/certs/gn_cert.pem -o root -g root -m 600;sudo install -D /tmp/'+os.path.basename(gn_ms_proxykey_file)+' /usr/local/etc/certs/gn_key.pem -o root -g root -m 600;sudo cat /usr/local/etc/certs/gn_cert.pem /usr/local/etc/certs/gn_key.pem >/tmp/unis-proxy.pem;sudo install -D /tmp/unis-proxy.pem /usr/local/etc/certs/unis-proxy.pem -o nobody -g nobody -m 750;sudo chmod 755 /usr/local/etc/certs;'
+		cmd = 'sudo install -D /tmp/'+os.path.basename(gn_ms_proxycert_file)+' '+GN_PROXY_CERT+' -o root -g root -m 600;sudo install -D /tmp/'+os.path.basename(gn_ms_proxykey_file)+' '+GN_PROXY_KEY+' -o root -g root -m 600;sudo cat '+GN_PROXY_CERT+' '+GN_PROXY_KEY+' >/tmp/unis-proxy.pem;sudo install -D /tmp/unis-proxy.pem '+GN_UNIS_CERT+' -o nobody -g nobody -m 750;sudo chmod 755 '+BASE_CERT_DIR+';'
+
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',cmd,None,None)
 		write_to_processlog(out_ssh,err_ssh,LOGFILE)
 
@@ -1113,7 +1121,7 @@ def install_MP_Certs(MP_Nodes,keyfile,lifetime,auth_uuid,LOGFILE,debug):
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'scp',None,mp_blipp_proxykey_file,'/tmp/'+os.path.basename(mp_blipp_proxykey_file))
 		write_to_processlog(out_ssh,err_ssh,LOGFILE)
 
-		cmd = 'sudo install -D /tmp/'+os.path.basename(mp_blipp_proxycert_file)+' /usr/local/etc/certs/mp_cert.pem -o root -g root -m 600;sudo install -D /tmp/'+os.path.basename(mp_blipp_proxykey_file)+' /usr/local/etc/certs/mp_key.pem -o root -g root -m 600;'
+		cmd = 'sudo install -D /tmp/'+os.path.basename(mp_blipp_proxycert_file)+' '+MP_PROXY_CERT+' -o root -g root -m 600;sudo install -D /tmp/'+os.path.basename(mp_blipp_proxykey_file)+' '+MP_PROXY_KEY+' -o root -g root -m 600;'
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',cmd,None,None)
 		write_to_processlog(out_ssh,err_ssh,LOGFILE)
 
@@ -1126,8 +1134,14 @@ def createBlippServiceEntries(MP_Nodes,GN_Node,UNISTopo,slice_uuid,LOGFILE,debug
 	service_desc.update({"$schema": UNIS_SCHEMAS["service"]})
 	service_desc.update({"serviceType": "ps:tools:blipp"})
 	service_desc.update({"description": "BLiPP Service"})
+	service_desc.update({"name": "blipp"})
 	service_desc.update({"properties": {"geni": {"slice_uuid": slice_uuid},
-					    "configurations": {"ms_url": "https://"+GN_Node["hostname"]+":8888"}}})
+					    "configurations": {"ms_url": "https://"+GN_Node["hostname"]+":8888",
+							       "use_ssl": True,
+							       "ssl_cert": MP_PROXY_CERT,
+							       "ssl_key": MP_PROXY_KEY,
+							       "ssl_cafile": ""
+							       }}})
 
 	for node in MP_Nodes:
 		cnode = None
