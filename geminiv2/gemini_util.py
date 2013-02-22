@@ -1136,13 +1136,14 @@ def createBlippServiceEntries(MP_Nodes,GN_Node,UNISTopo,slice_uuid,LOGFILE,debug
 	service_desc.update({"description": "BLiPP Service"})
 	service_desc.update({"name": "blipp"})
 	service_desc.update({"properties": {"geni": {"slice_uuid": slice_uuid},
-					    "configurations": {"ms_url": "https://"+GN_Node["hostname"]+":8888",
-							       "use_ssl": True,
-							       "ssl_cert": MP_PROXY_CERT,
-							       "ssl_key": MP_PROXY_KEY,
-							       "ssl_cafile": ""
-							       }}})
-
+					    "configurations": 
+					    {"probe_defaults": {"ms_url": "https://"+GN_Node["hostname"]+":8888"},
+					     "use_ssl": True,
+					     "ssl_cert": MP_PROXY_CERT,
+					     "ssl_key": MP_PROXY_KEY,
+					     "ssl_cafile": ""
+					     }}})
+	
 	for node in MP_Nodes:
 		cnode = None
 		for n in UNISTopo["nodes"]:
