@@ -1409,9 +1409,16 @@ def getLOGBASE():
 
 def getCert_issuer_n_username():
 	global CERTIFICATE
+	subjectInfo = []
+	USER_URN = ''
 	cert = M2Crypto.X509.load_cert(CERTIFICATE)
 	X509_EXT = cert.get_ext('subjectAltName').get_value()
-	(USER_URN,others) = X509_EXT.split(',',1)
+	subjectInfo = X509_EXT.split(',')
+	for info in subjectInfo:
+		info = info.strip()
+		if(info.startswith("URI:urn:publicid:IDN")):
+			USER_URN = info
+			break
 	(junk,domain,type,username) = USER_URN.split('+')
 	return (domain.replace('.','_')).replace(':','_'),username
 	
