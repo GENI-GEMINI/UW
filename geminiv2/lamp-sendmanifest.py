@@ -68,6 +68,7 @@ RSPEC_NS_2 = "http://www.protogeni.net/resources/rspec/2"
 RSPEC_NS_3 = "http://www.geni.net/resources/rspec/3"
 LAMP_NS = "http://protogeni.net/resources/rspec/0.2/ext/lamp/1"
 GEMINI_NS = "http://geni.net/resources/rspec/ext/gemini/1"
+FLACK_NS = "http://www.protogeni.net/resources/rspec/ext/flack/1"
 
 host = "unis.incntre.iu.edu"
 port = 8012
@@ -330,6 +331,7 @@ def manifest_v2_to_unis(manifest, slice_id):
     topology.setAttribute("xmlns", UNIS_NS)
     topology.setAttribute("xmlns:pgeni", PROTOGENI_NS)
     topology.setAttribute("xmlns:psconfig", PSCONFIG_NS)
+    topology.setAttribute("xmlns:flack", FLACK_NS)
 
     return unis_dom
     
