@@ -5,17 +5,23 @@ For Ubuntu can be got from
 
 apt-get install python-paramiko 
 
-lxml is required for decoder
-apt-get install python-lxml
+Additional dependencies can be retrieved by running:
+
+sudo python setup.py install
+
+in the geminiv2 directory.
+
 
 ===============================
 INSTALL ABAC with Creddy
 ------------------------
 For Ubuntu the following packagaes are needed
 
-apt-get install python-m2crypto python-dateutil python-openssl libxmlsec1 xmlsec1 libxmlsec1-openssl libxmlsec1-dev openjdk-7-jdk git  python-M2Crypto python-paramiko sharutils ntp libncurses-dev build-essential bison flex python-lxm
+apt-get install python-m2crypto python-dateutil python-openssl libxmlsec1 xmlsec1 libxmlsec1-openssl libxmlsec1-dev openjdk-7-jdk git python-M2Crypto python-paramiko sharutils ntp libncurses-dev build-essential bison flex python-lxm
 
-Other requirements are the installation of abac and creddy along with its dependencies as mentioned at http://abac.deterlab.net/browser/doc/INSTALL?rev=mei_rt2
+Other requirements are the installation of abac and creddy along with
+its dependencies as mentioned at
+http://abac.deterlab.net/browser/doc/INSTALL?rev=mei_rt2
 
 
 You need to build strongswan and Yap as dependencies.
@@ -64,21 +70,47 @@ Brief Notes on Usage of gemini v2 scripts
 =========================================
 The first part in all the three scripts 1,2,3 mentioned below involve the following steps
 
-a) Send the GeniDesktop Parser (PHP Call - getUserInfo() ) user cert and passphrase to validate user. This returns user info details and a unique user_crypt returned in JSON
-b) Send the GeniDesktop Parser (PHP Call - getSliceinfo() ) the user_crypt from (1). This returns List of all slices the user has along with a unique slice_crypt for each slice.
-c) Send the GeniDesktop Parser (PHP Call - parseManifest() ) the slice_crypt for the slice in question , the slicename, the request type (like NodeInfo) and optional param force_refresh=1. This returns the manifest information in a JSON format that contains all relevant info parsed from the original manifest for further processing.
+a) Send the GeniDesktop Parser (PHP Call - getUserInfo() ) user cert
+and passphrase to validate user. This returns user info details and a
+unique user_crypt returned in JSON
 
-Since these three steps are usually required by all the below mentioned python scripts, we have implemented caching where the first script run would also store the JSONS returned  in a file  /tmp/.gemini/*.json with a timeout of 10 minutes
+b) Send the GeniDesktop Parser (PHP Call - getSliceinfo() ) the
+user_crypt from (1). This returns List of all slices the user has
+along with a unique slice_crypt for each slice.
 
-The assumption here is that the pythons scripts would have atleast started within the 10 minutes and thus would be utilizing the cache rather than overloading the parser for the same info already requested. In case you are creating and destroying experiments within 10 minutes and woul like to reuse the slicenames, then please delete the cache before restaring the GEMINI Instrumentize process.
+c) Send the GeniDesktop Parser (PHP Call - parseManifest() ) the
+slice_crypt for the slice in question , the slicename, the request
+type (like NodeInfo) and optional param force_refresh=1. This returns
+the manifest information in a JSON format that contains all relevant
+info parsed from the original manifest for further processing.
 
-There are other GeniDesktop Parser call that will be used . I will document them all at a later date. 
+Since these three steps are usually required by all the below
+mentioned python scripts, we have implemented caching where the first
+script run would also store the JSONS returned in a file
+/tmp/.gemini/*.json with a timeout of 10 minutes
 
-The python scripts for the instrumentize process are mentioned below and need to be run in the same sequence mentioned below. The run.sh does the sequence for you ,but is not reliable in case of faliure in any one of the python scripts.
+The assumption here is that the pythons scripts would have atleast
+started within the 10 minutes and thus would be utilizing the cache
+rather than overloading the parser for the same info already
+requested. In case you are creating and destroying experiments within
+10 minutes and woul like to reuse the slicenames, then please delete
+the cache before restaring the GEMINI Instrumentize process.
+
+There are other GeniDesktop Parser call that will be used . I will
+document them all at a later date.
+
+The python scripts for the instrumentize process are mentioned below
+and need to be run in the same sequence mentioned below. The run.sh
+does the sequence for you ,but is not reliable in case of faliure in
+any one of the python scripts.
 
 1. gdesktop-opstatus.py -n <SLICENAME> -f <path to GENI cert file > -p <PATH to passphrase file>
 2. gdesktop-init.py -n <SLICENAME> -f <path to GENI cert file > -p <PATH to passphrase file>
 3. gdesktop-instrumentize.py -n <SLICENAME> -f <path to GENI cert file > -p <PATH to passphrase file>
 4. run.sh <SLICENAME>
 
-NOTE: An option "-k <path to ssh private key>" is also provided for all scripts, but is not required. The scripts use the private key from your GENI Cert to ssh into your machines. SO if you have not generated ssh keys for your account, you dont need to and the geni private/public ssh keys can be used to get to your experimental nodes.
+NOTE: An option "-k <path to ssh private key>" is also provided for
+all scripts, but is not required. The scripts use the private key from
+your GENI Cert to ssh into your machines. SO if you have not generated
+ssh keys for your account, you dont need to and the geni
+private/public ssh keys can be used to get to your experimental nodes.
