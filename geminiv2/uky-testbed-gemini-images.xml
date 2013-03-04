@@ -2,7 +2,7 @@
 	<node xmlns:gemini="http://geni.net/resources/rspec/ext/gemini/1" client_id="GN" component_manager_id="urn:publicid:IDN+uky.emulab.net+authority+cm" exclusive="false">
 		<emulab:routable_control_ip xmlns:emulab="http://www.protogeni.net/resources/rspec/ext/emulab/1"/>
 		<sliver_type name="emulab-openvz">
-			<disk_image name="urn:publicid:IDN+uky.emulab.net+image+uky-emulab-net:GEMINI_GN"/>
+			<disk_image name="urn:publicid:IDN+uky.emulab.net+image+uky-emulab-net:GEMINI_GN2"/>
 		</sliver_type>
 		<gemini:node type="global_node">
 			<gemini:monitor_urn name="urn:publicid:IDN+uky.emulab.net+authority+cm"/>
@@ -10,7 +10,7 @@
 	</node>
 	<node xmlns:gemini="http://geni.net/resources/rspec/ext/gemini/1" client_id="PCA" component_manager_id="urn:publicid:IDN+uky.emulab.net+authority+cm" exclusive="false">
 		<sliver_type name="emulab-openvz">
-			<disk_image name="urn:publicid:IDN+uky.emulab.net+image+uky-emulab-net//GEMINI_MP"/>
+			<disk_image name="urn:publicid:IDN+uky.emulab.net+image+uky-emulab-net//GEMINI_MP2"/>
 		</sliver_type>
 		<interface client_id="PCA:if0"/>
 		<gemini:node type="mp_node">
@@ -22,7 +22,7 @@
 	</node>
 	<node xmlns:gemini="http://geni.net/resources/rspec/ext/gemini/1" client_id="PCB" component_manager_id="urn:publicid:IDN+uky.emulab.net+authority+cm" exclusive="false">
 		<sliver_type name="emulab-openvz">
-			<disk_image name="urn:publicid:IDN+uky.emulab.net+image+uky-emulab-net//GEMINI_MP"/>
+			<disk_image name="urn:publicid:IDN+uky.emulab.net+image+uky-emulab-net//GEMINI_MP2"/>
 		</sliver_type>
 		<interface client_id="PCB:if0" />
 		<interface client_id="PCB:if1" />
@@ -35,7 +35,7 @@
 	</node>
 	<node xmlns:gemini="http://geni.net/resources/rspec/ext/gemini/1" client_id="PCC" component_manager_id="urn:publicid:IDN+uky.emulab.net+authority+cm" exclusive="false">
 		<sliver_type name="emulab-openvz">
-			<disk_image name="urn:publicid:IDN+uky.emulab.net+image+uky-emulab-net//GEMINI_MP"/>
+			<disk_image name="urn:publicid:IDN+uky.emulab.net+image+uky-emulab-net//GEMINI_MP2"/>
 		</sliver_type>
 		<interface client_id="PCC:if0"/>
 		<gemini:node type="mp_node">
