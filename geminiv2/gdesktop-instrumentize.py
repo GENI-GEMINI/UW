@@ -440,7 +440,7 @@ for my_manager in managers:
 	#Sending Manifest to new UNIS
 	topology = etree.XML(manifest[my_manager])
 	encoder = RSpec3Decoder()
-	kwargs = dict(slice_urn=SLICEURN,
+	kwargs = dict(slice_urn=my_manager.replace('+authority+cm','')+'+slice+'+gemini_util.SLICENAME,
                       slice_uuid=slice_uuid,
                       component_manager_id=None)
 	
