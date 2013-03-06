@@ -1235,6 +1235,16 @@ def getSliceinfoFromParser(user_crypt,LOGFILE,debug):
 	post_return = post_response.read()
 	return post_return
 
+#Clear Cert and Passphrase at  GeniDesktop Parser
+def clearUserinfoatParser(user_crypt,LOGFILE,debug):
+
+	post_data = urllib.urlencode({'user_crypt':user_crypt})
+	url = 'https://parser.netlab.uky.edu/clearUserinfo.php'
+	req = urllib2.Request(url,post_data)
+	post_response = urllib2.urlopen(req)
+	post_return = post_response.read()
+	return post_return
+
 def getJSONManifestFromParser(slice_crypt,slicename,api,force_refresh,LOGFILE,debug):
 	
 	post_data = urllib.urlencode({'key':slice_crypt,'slice_name':slicename,'api':api,'force_refresh':force_refresh})

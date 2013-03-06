@@ -108,9 +108,10 @@ any one of the python scripts.
 2. gdesktop-init.py -n <SLICENAME> -f <path to GENI cert file > -p <PATH to passphrase file>
 3. gdesktop-instrumentize.py -n <SLICENAME> -f <path to GENI cert file > -p <PATH to passphrase file>
 4. run.sh <SLICENAME>
+5. gdesktop-clearCreds.py -f <path to GENI cert file > -p <PATH to passphrase file> (This will clear out the user's cert and passphrase at the Genidesktop Parser)
 
 NOTE: An option "-k <path to ssh private key>" is also provided for
-all scripts, but is not required. The scripts use the private key from
+all scripts (except 5) , but is not required. The scripts use the private key from
 your GENI Cert to ssh into your machines. SO if you have not generated
 ssh keys for your account, you dont need to and the geni
 private/public ssh keys can be used to get to your experimental nodes.
