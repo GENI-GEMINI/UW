@@ -179,7 +179,6 @@ else:
 	msg = "User not identified : "+ UserOBJ['output']
         gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 	sys.exit(1)
-
 msg = "Found User Info for "+USERURN
 gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 if (FILE):
@@ -249,7 +248,6 @@ if(NodesOBJ['code'] != 0):
 	msg = NodesOBJ['output']+": No Manifest Available for : "+ SliceInfo['sliceurn']
         gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 	sys.exit(1)
-
 
 Nodes = NodesOBJ['output']
 for Node in Nodes:
