@@ -1146,14 +1146,14 @@ def createBlippServiceEntries(MP_Nodes,GN_Node,UNISTopo,slice_uuid,LOGFILE,debug
 					     }}})
 	
 	for node in MP_Nodes:
-		cnode = None
-		for n in UNISTopo["nodes"]:
-			if n["name"] == node["nodeid"]:
-				cnode = n
-				break
+		#cnode = None
+		#for n in UNISTopo["nodes"]:
+		#	if n["name"] == node["nodeid"]:
+		#		cnode = n
+		#               break
 		
 		post_desc = service_desc
-		post_desc.update({"runningOn": {"href": UNIS_URL+"/nodes/"+cnode["id"],
+		post_desc.update({"runningOn": {"href": UNIS_URL+"/nodes/"+node["machine_hostname"],
 						"rel": "full"}})
 		post_str = json.dumps(post_desc)
 		postDataToUNIS(PROXY_KEY,PROXY_CERT,"/services",post_str,LOGFILE,debug)
