@@ -1029,7 +1029,7 @@ def install_irods_Certs(GN_Nodes,keyfile,lifetime,LOGFILE,debug):
 	genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,proxycert_file,proxykey_file, "irods",lifetime,passphrase)
 	f2.seek(0)
 	f1.seek(0,2)
-	f1.write(f2.read())
+	f1.write("\n"+f2.read())
 	f1.flush()
 
 
@@ -1248,7 +1248,7 @@ def clearUserinfoatParser(user_crypt,LOGFILE,debug):
 def getJSONManifestFromParser(slice_crypt,slicename,api,force_refresh,LOGFILE,debug):
 	
 	post_data = urllib.urlencode({'key':slice_crypt,'slice_name':slicename,'api':api,'force_refresh':force_refresh})
-	url = 'https://parser.netlab.uky.edu/parseManifest.php'
+	url = 'https://parser.netlab.uky.edu/parseManifest2.php'
 	req = urllib2.Request(url,post_data)
 	post_response = urllib2.urlopen(req)
 	post_return = post_response.read()
