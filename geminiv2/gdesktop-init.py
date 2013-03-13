@@ -169,6 +169,7 @@ if (UserOBJ['code'] == 0):
 	email_id = UserInfo['email']
 	USERURN = UserInfo['userurn']
 	user_crypt = UserInfo['user_crypt']
+	user_public_key = UserInfo['public_key']
 	#CERT_ISSUER = UserInfo['certificate_issuer']
 else:
 	msg = "User not identified : "+ UserOBJ['output']
@@ -355,7 +356,7 @@ for my_manager in managers:
 	# STEP 2 : Download Passive measurement scripts and start ssh-key generator on the GN
 	# STEP 2b : Save MC public key onto a file pn GN, fetch it from the GN and place it on all MP Nodes
 	# STEP 3 : Install Shell in a box on all nodes and generate the Shellinabox config
-	(result,msg) = gemini_util.install_keys_plus_shell_in_a_box(pruned_GN_Nodes[0],pruned_MP_Nodes,debug,LOGFILE,keyfile)
+	(result,msg) = gemini_util.install_keys_plus_shell_in_a_box(pruned_GN_Nodes[0],pruned_MP_Nodes,user_public_key,debug,LOGFILE,keyfile)
 	if(result):
 		msg = "All nodes at AM --> "+my_manager+" have been Initialized."
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
