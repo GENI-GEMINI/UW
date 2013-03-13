@@ -131,7 +131,7 @@ def print_timing(func):
         return res
     return wrapper
 
-def install_keys_plus_shell_in_a_box( GN_Node,MP_Nodes,debug,LOGFILE,keyfile):
+def install_keys_plus_shell_in_a_box(GN_Node,MP_Nodes,my_public_key,debug,LOGFILE,keyfile):
 
 	MC_NODE_keypath = "/tmp"
 	LOCAL_tmppath = "/tmp"
@@ -142,15 +142,27 @@ def install_keys_plus_shell_in_a_box( GN_Node,MP_Nodes,debug,LOGFILE,keyfile):
 	public_key_dest = "/var/emulab/boot/mc_ssh_pubkey"
 	rc_startup="/etc/rc.local"
 	root_authorized_keys="/root/.ssh/authorized_keys"
+	import socket
 		
-	GN_cmd ="cd "+EXP_TMP_PATH+";sudo rm -rf /tmp/gdesktop*;wget -q -P "+EXP_TMP_PATH+" "+INSTOOLS_repo_url+"tarballs/GDESKTOP_SETUP.tgz;tar xzf GDESKTOP_SETUP.tgz;sudo ./GDESKTOP_SETUP.sh GN init;"
 	my_cmurn = GN_Node['cmurn']
 	sliver_urn = GN_Node['sliver_id']
 	hostname = GN_Node['login_hostname']
 	port = GN_Node['login_port']
 	username = GN_Node['login_username']
 	vid = GN_Node['nodeid']
+	if(socket.getfqdn() != "genidesktop.netlab.uky.edu"):
+		msg = "Placing your ssh public key for Genidesktop on "+hostname
+		write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
+		command = "cd "+EXP_TMP_PATH+";wget -q -P "+EXP_TMP_PATH+" "+INSTOOLS_repo_url+"tarballs/addmypublickey.tgz;tar xzf addmypublickey.tgz;./addmypublickey.sh "+username+' "'+my_public_key+'";'
+		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',command,None,None)
+		write_to_processlog(out_ssh,err_ssh,LOGFILE)
+		if (ret_code != 0):
+			msg =  "Problem Initializing the GN Node "+str(hostname)+"\n"+str(err_ssh)
+			return FALSE,msg
+		pass
 
+
+	GN_cmd ="cd "+EXP_TMP_PATH+";sudo rm -rf /tmp/gdesktop*;wget -q -P "+EXP_TMP_PATH+" "+INSTOOLS_repo_url+"tarballs/GDESKTOP_SETUP.tgz;tar xzf GDESKTOP_SETUP.tgz;sudo ./GDESKTOP_SETUP.sh GN init ;"
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',GN_cmd,None,None)
 	write_to_processlog(out_ssh,err_ssh,LOGFILE)
 	if (ret_code != 0):
@@ -186,7 +198,19 @@ def install_keys_plus_shell_in_a_box( GN_Node,MP_Nodes,debug,LOGFILE,keyfile):
 			msg = "SCP to "+hostname+":"+port+" failed "+ err_ssh
 			return FALSE,msg
 
-		node_cmd ="sudo mv "+'/tmp/'+os.path.basename(my_mckeyfile)+" "+public_key_dest+";cd /tmp;sudo rm -rf GDESKTOP_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/GDESKTOP_SETUP.tgz;tar xzf GDESKTOP_SETUP.tgz;sudo ./GDESKTOP_SETUP.sh MP init "
+		if(socket.getfqdn() != "genidesktop.netlab.uky.edu"):
+			msg = "Placing your ssh public key for Genidesktop on "+hostname
+			write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
+			command = "cd "+EXP_TMP_PATH+";wget -q -P "+EXP_TMP_PATH+" "+INSTOOLS_repo_url+"tarballs/addmypublickey.tgz;tar xzf addmypublickey.tgz;./addmypublickey.sh "+username+' "'+my_public_key+'";'
+			(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',command,None,None)
+			write_to_processlog(out_ssh,err_ssh,LOGFILE)
+			if (ret_code != 0):
+				msg =  "Problem Initializing the MP Node "+str(hostname)+"\n"+str(err_ssh)
+				return FALSE,msg
+		pass
+
+
+		node_cmd ="sudo mv "+'/tmp/'+os.path.basename(my_mckeyfile)+" "+public_key_dest+";cd /tmp;sudo rm -rf GDESKTOP_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/GDESKTOP_SETUP.tgz;tar xzf GDESKTOP_SETUP.tgz;sudo ./GDESKTOP_SETUP.sh MP init"
 	        p = multiprocessing.Process(target=NodeInstall,args=(Node,node_cmd,'initialization',LOGFILE,debug,keyfile,))
 		proclist.append(p)
 		p.start()                                                                                                                      
