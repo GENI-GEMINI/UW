@@ -305,6 +305,9 @@ if (len(GN_Nodes) == 0):
 status = {}
 for Node in GN_Nodes:
 
-	status[Node['sliver_id']] = gemini_util.getLockStatus(Node,LOGFILE,keyfile,debug)
+	init_status = gemini_util.getLockStatus(Node,LOGFILE,keyfile,debug)
+	if(init_status == ""):
+		init_status = "NOT_INITIALIZED"
+	status[Node['sliver_id']] = init_status
 
 print json.dumps(status)
