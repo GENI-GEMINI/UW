@@ -3,8 +3,8 @@ Usage: plotcmd.py <ms-url> [-c CERT] [-k KEY] [-u UNIS]
 
 Options:
   -u UNIS --unis-url=UNIS   UNIS url [default: https://unis.incntre.iu.edu:8443].
-  -c CERT --cert=CERT       SSL cert location [default: ~/.ssl/emulab.pem]
-  -k KEY --key=KEY          SSL key location [default: ~/.ssl/emulab.pem]
+  -c CERT --cert=CERT       SSL cert location
+  -k KEY --key=KEY          SSL key location
 
 '''
 from dict_cmd import DictCmd
@@ -17,6 +17,13 @@ class PlotCmd(DictCmd):
     def __init__(self, args):
         self.args = args
         self.prompt = col.PROMPT + "plotcmd>>> " + col.ENDC
+        if args['--cert']:
+            args['--key'] = args['--cert'] if not args['--key'] else args['--key']
+            self.cert_key = (args['--cert'], args['--key'])
+        else:
+            self.cert_key = None
+
+        ms_plot.cert_key = self.cert_key
         self.md_list = [] # list of metadata object from MS
         DictCmd.__init__(self, {})
 
@@ -29,9 +36,12 @@ class PlotCmd(DictCmd):
         '''
         if not qstr:
             qstr = query_string_from_dict(self.d)
-        r = requests.get(args["--unis-url"] + "/metadata?" + qstr)
-        self.md_list = r.json
-        for md in r.json:
+        if self.cert_key:
+            r = requests.get(args["--unis-url"] + "/metadata?" + qstr, cert=self.cert_key, verify=False)
+        else:
+            r = requests.get(args["--unis-url"] + "/metadata?" + qstr)
+        self.md_list = r.json()
+        for md in r.json():
             print md["eventType"]
 
     def do_add(self, qstr):
@@ -40,7 +50,10 @@ class PlotCmd(DictCmd):
         '''
         if not qstr:
             qstr = query_string_from_dict(self.d)
-        r = requests.get(args["--unis-url"] + "/metadata?" + qstr)
+        if self.cert_key:
+            r = requests.get(args["--unis-url"] + "/metadata?" + qstr, cert=self.cert_key, verify=False)
+        else:
+            r = requests.get(args["--unis-url"] + "/metadata?" + qstr)
         self.md_list.extend(r.json)
         self.uniquify_md_list()
         for md in r.json:

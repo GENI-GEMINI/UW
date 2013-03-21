@@ -26,17 +26,19 @@ mds = []
 data = {}
 axes = {}
 AXES = {}
+cert_key = None
 fig = setup_figure(plt.figure())
-YTICKNUM = 7
-XTICKNUM = 11
+YTICKNUM = 6
+XTICKNUM = 4
 def main(arguments):
-    r = requests.get(arguments['<query-url>'])
-    tss = [ x["ts"] for x in r.json ]
-    vals = [ x["value"] for x in r.json ]
+    r = requests.get(arguments['<query-url>'], cert=cert_key, verify=False)
+    tss = [ x["ts"] for x in r.json() ]
+    vals = [ x["value"] for x in r.json() ]
     plt.plot(tss, vals)
     plt.show()
 
 def plot_all():
+    global mds
     plotnum = 0
     numrows = len(mds)/2
     if len(mds)%2==1:
@@ -59,7 +61,7 @@ def plot_all():
         td = data[md["id"]]
         td["tss"] = tss
         td["vals"] = vals
-        ax.set_title(md["eventType"])
+        ax.set_title(':'.join(md["eventType"].split(':')[-3:]))
     import gobject
     gobject.idle_add(animate)
     plt.show()
@@ -88,7 +90,7 @@ def animate():
 
 def get_data(metadata, xtraq=""):
     ms_url = metadata["parameters"]["config"]["ms_url"]
-    r = requests.get(ms_url + "/data/" + metadata["id"] + xtraq)
+    r = requests.get(ms_url + "/data/" + metadata["id"] + xtraq, cert=cert_key, verify=False)
     return extract_data(r)
 
 def get_ticks(xdata, num_ticks):
@@ -114,8 +116,8 @@ def get_tick_labels(ticks):
 def extract_data(r):
     if not r:
         return ([], [])
-    tss = [ r.json[i]["ts"] for i in range(len(r.json)-1, -1, -1) ]
-    vals = [ float(r.json[i]["value"]) for i in range(len(r.json)-1, -1, -1) ]
+    tss = [ r.json()[i]["ts"] for i in range(len(r.json())-1, -1, -1) ]
+    vals = [ float(r.json()[i]["value"]) for i in range(len(r.json())-1, -1, -1) ]
     return tss, vals
 
 def get_ts_labels(tss):
