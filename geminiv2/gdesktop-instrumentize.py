@@ -61,7 +61,7 @@ def Usage():
                                             [default: ~/.ssl/password]"""
 
 try:
-    opts, REQARGS = getopt.gnu_getopt( sys.argv[ 1: ], "dhx:k:f:n:j:p:",
+    opts, REQARGS = getopt.gnu_getopt( sys.argv[ 1: ], "dhxk:f:n:j:p:",
                                    [ "debug","help","no_force_refresh","pkey=","certificate=",
                                      "slicename=","loadFromFile="
                                      "passphrase="] )
@@ -365,90 +365,116 @@ if(not FILE):
 #future = now + datetime.timedelta(seconds=slice_lifetime)
 #start_date = int(time.mktime(now.timetuple()))
 #end_date = int(time.mktime(future.timetuple()))
+while(not gemini_util.DISABLE_ACTIVE):
+	# round up the lifetime to the next day for now
+	validity = datetime.timedelta(seconds=slice_lifetime)
+	slice_lifetime = validity.days + 1
+	#Now setup a proxy cert for the instrumentize script so we can talk to UNIS without keypass
+	gemini_util.makeInstrumentizeProxy(slice_lifetime,slice_uuid,LOGFILE,debug)
+	if not (gemini_util.PROXY_ATTR):
+		msg = "ERROR: Could not complete proxy certificate creation for instrumentize process"
+		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+		msg = "Active Services will be disabled to continue with the Instrumentation process"
+		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+		gemini_util.DISABLE_ACTIVE = gemini_util.TRUE
+		break
 
-# round up the lifetime to the next day for now
-validity = datetime.timedelta(seconds=slice_lifetime)
-slice_lifetime = validity.days + 1
-#Now setup a proxy cert for the instrumentize script so we can talk to UNIS without keypass
-gemini_util.makeInstrumentizeProxy(slice_lifetime,slice_uuid,LOGFILE,debug)
-if not (gemini_util.PROXY_ATTR):
-	msg = "ERROR: Could not complete proxy certificate creation for instrumentize process"
+#		sys.exit(1)
+
+	## temporary hack to write out an unencrypted keyfile for the slice registration call to UNIS
+	TEMP_KEYFILE = gemini_util.getUnencryptedKeyfile(LOGFILE,debug)
+	msg="Registering slice credential with Global UNIS"
 	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-	sys.exit(1)
+	res1 = gemini_util.postDataToUNIS(TEMP_KEYFILE,gemini_util.CERTIFICATE,"/credentials/genislice",slicecred,LOGFILE,debug)
+	os.remove(TEMP_KEYFILE)
+	f = open(gemini_util.PROXY_ATTR)
+	res2 = gemini_util.postDataToUNIS(gemini_util.PROXY_KEY,gemini_util.PROXY_CERT,"/credentials/geniuser",f,LOGFILE,debug)
+	f.close()
+	os.remove(gemini_util.PROXY_ATTR)
+	if res1 or res2 is None:
+		msg="Failed to register slice credential"
+		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 
-## temporary hack to write out an unencrypted keyfile for the slice registration call to UNIS
-TEMP_KEYFILE = gemini_util.getUnencryptedKeyfile(LOGFILE,debug)
-msg="Registering slice credential with Global UNIS"
-gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-res1 = gemini_util.postDataToUNIS(TEMP_KEYFILE,gemini_util.CERTIFICATE,"/credentials/genislice",slicecred,LOGFILE,debug)
-os.remove(TEMP_KEYFILE)
-f = open(gemini_util.PROXY_ATTR)
-res2 = gemini_util.postDataToUNIS(gemini_util.PROXY_KEY,gemini_util.PROXY_CERT,"/credentials/geniuser",f,LOGFILE,debug)
-f.close()
-os.remove(gemini_util.PROXY_ATTR)
-if res1 or res2 is None:
-	msg="Failed to register slice credential"
+		msg = "Active Services will be disabled to continue with the Instrumentation process"
+		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+		gemini_util.DISABLE_ACTIVE = gemini_util.TRUE
+		break
+		#sys.exit(1)
+
+	# Fetching LAMP Cert 
+	msg = "Asking for my lamp certificate"
 	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-	sys.exit(1)
 
-# Fetching LAMP Cert 
-msg = "Asking for my lamp certificate"
-gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	params = {}
+	params["credential"] = (slicecred,)
+	rval,response = gemini_util.do_method(ctx,"lamp", "GetLAMPSliceCertificate", params, URI=gemini_util.lampca)
+	if rval:
+		msg = "Could not get Lamp Certificate: " +str(response)
+		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 
-params = {}
-params["credential"] = (slicecred,)
-rval,response = gemini_util.do_method(ctx,"lamp", "GetLAMPSliceCertificate", params, URI=gemini_util.lampca)
-if rval:
-	msg = "Could not get Lamp Certificate: " +str(response)
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-	sys.exit(1)
+		msg = "Active Services will be disabled to continue with the Instrumentation process"
+		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+		gemini_util.DISABLE_ACTIVE = gemini_util.TRUE
+		break
+		#sys.exit(1)
+		pass
+
+
+	LAMPCERT = response["value"]
+	if (not LAMPCERT.find("BEGIN RSA PRIVATE KEY") or not LAMPCERT.find("BEGIN CERTIFICATE")):
+		msg = "Failed to get valid certificate from LAMP CA. Got \n"+LAMPCERT+"instead\n"
+		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+
+		msg = "Active Services will be disabled to continue with the Instrumentation process"
+		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+		gemini_util.DISABLE_ACTIVE = gemini_util.TRUE
+		break
+		#sys.exit(1)
+	else:
+		msg = "Certificate from LAMP CA\n"+LAMPCERT+"\n"
+		gemini_util.write_to_log(LOGFILE,msg,gemini_util.dontprinttoscreen,debug)
 	pass
 
-
-LAMPCERT = response["value"]
-if (not LAMPCERT.find("BEGIN RSA PRIVATE KEY") or not LAMPCERT.find("BEGIN CERTIFICATE")):
-	msg = "Failed to get valid certificate from LAMP CA. Got \n"+LAMPCERT+"instead\n"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-	sys.exit(1)
-else:
-	msg = "Certificate from LAMP CA\n"+LAMPCERT+"\n"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.dontprinttoscreen,debug)
-pass
-
-manifest = {}
-unis_topology = {}
-#Stripped_slice_cred
-SLICECRED_FOR_LAMP = slicecred.replace('<?xml version="1.0" encoding="UTF-8" standalone="no"?>','',1).lstrip()
-for my_manager in managers:
-	# download Manifest for slice
-	msg = "Downloading Manifest from the GeniDesktop Parser for "+my_manager
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-	manifest[my_manager] = gemini_util.downloadManifestFromParser(slice_crypt,my_manager,LOGFILE,debug)	
-	if (manifest[my_manager] == ''):
-		msg = "Could not obtain Manifest from "+my_manager+"for "+SLICEURN+" from GeniDesktop Parser"
+	manifest = {}
+	unis_topology = {}
+	#Stripped_slice_cred
+	SLICECRED_FOR_LAMP = slicecred.replace('<?xml version="1.0" encoding="UTF-8" standalone="no"?>','',1).lstrip()
+	for my_manager in managers:
+		# download Manifest for slice
+		msg = "Downloading Manifest from the GeniDesktop Parser for "+my_manager
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-		sys.exit(1)
-	#Sending Manifest to old UNIS
-	(state,msg) = gemini_util.LAMP_sendmanifest(SLICEURN,manifest[my_manager],LAMPCERT,SLICECRED_FOR_LAMP,LOGFILE,debug)
-	if( not state):
-		msg = msg +"Failed to send manifest to UNIS"
-		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-		sys.exit(1)
-	else:
-		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-		
-	#Sending Manifest to new UNIS
-	topology = etree.XML(manifest[my_manager])
-	encoder = RSpec3Decoder()
-	kwargs = dict(slice_urn=my_manager.replace('+authority+cm','')+'+slice+'+gemini_util.SLICENAME,
-                      slice_uuid=slice_uuid,
-                      component_manager_id=None)
+		manifest[my_manager] = gemini_util.downloadManifestFromParser(slice_crypt,my_manager,LOGFILE,debug)	
+		if (manifest[my_manager] == ''):
+			msg = "Could not obtain Manifest from "+my_manager+"for "+SLICEURN+" from GeniDesktop Parser"
+			gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+			sys.exit(1)
+		#Sending Manifest to old UNIS
+		(state,msg) = gemini_util.LAMP_sendmanifest(SLICEURN,manifest[my_manager],LAMPCERT,SLICECRED_FOR_LAMP,LOGFILE,debug)
+		if( not state):
+			msg = msg +"Failed to send manifest to UNIS. Active Services will be disabled to continue with the Instrumentation process"
+			gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+			gemini_util.DISABLE_ACTIVE = gemini_util.TRUE
+			break
+		#	sys.exit(1)
+		else:
+			gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+			
+		#Sending Manifest to new UNIS
+		topology = etree.XML(manifest[my_manager])
+		encoder = RSpec3Decoder()
+		kwargs = dict(slice_urn=my_manager.replace('+authority+cm','')+'+slice+'+gemini_util.SLICENAME,
+       	               slice_uuid=slice_uuid,
+       	               component_manager_id=None)
 	
-	unis_topology = encoder.encode(topology, **kwargs)
-	unis_string = json.dumps(unis_topology)
-	msg = "Sending manifest to Global UNIS"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-	result = gemini_util.postDataToUNIS(gemini_util.PROXY_KEY,gemini_util.PROXY_CERT,"/domains",unis_string,LOGFILE,debug)
+		unis_topology = encoder.encode(topology, **kwargs)
+		unis_string = json.dumps(unis_topology)
+		msg = "Sending manifest to Global UNIS"
+		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+		result = gemini_util.postDataToUNIS(gemini_util.PROXY_KEY,gemini_util.PROXY_CERT,"/domains",unis_string,LOGFILE,debug)
+		if(result == None):
+			gemini_util.DISABLE_ACTIVE = gemini_util.TRUE
+			break
+	break
 
 for my_manager in managers:
 
@@ -507,17 +533,19 @@ for my_manager in managers:
 
 	msg = "Generating and installing certificates"
 	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-	gemini_util.install_GN_Certs(pruned_GN_Nodes,keyfile,slice_lifetime,slice_uuid,LOGFILE,debug)
-	gemini_util.install_MP_Certs(pruned_MP_Nodes,keyfile,slice_lifetime,slice_uuid,LOGFILE,debug)
+	if(not gemini_util.DISABLE_ACTIVE):
+		gemini_util.install_GN_Certs(pruned_GN_Nodes,keyfile,slice_lifetime,slice_uuid,LOGFILE,debug)
+		gemini_util.install_MP_Certs(pruned_MP_Nodes,keyfile,slice_lifetime,slice_uuid,LOGFILE,debug)
 	gemini_util.install_irods_Certs(pruned_GN_Nodes,keyfile,slice_lifetime,LOGFILE,debug)
 
-	msg = "Creating BLiPP service configurations, sending to UNIS"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-	gemini_util.createBlippServiceEntries(pruned_MP_Nodes,pruned_GN_Nodes[0],unis_topology,slice_uuid,LOGFILE,debug)
+	if(not gemini_util.DISABLE_ACTIVE):
+		msg = "Creating BLiPP service configurations, sending to UNIS"
+		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+		gemini_util.createBlippServiceEntries(pruned_MP_Nodes,pruned_GN_Nodes[0],unis_topology,slice_uuid,LOGFILE,debug)
 
-	msg = "Installing and configuring MP Nodes for Active Measurements"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-	gemini_util.install_Active_measurements(pruned_MP_Nodes,pruned_GN_Nodes[0],USERURN,SLICEURN,slice_uuid,LAMPCERT,LOGFILE,keyfile,debug)
+		msg = "Installing and configuring MP Nodes for Active Measurements"
+		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+		gemini_util.install_Active_measurements(pruned_MP_Nodes,pruned_GN_Nodes[0],USERURN,SLICEURN,slice_uuid,LAMPCERT,LOGFILE,keyfile,debug)
 
 	gemini_util.initialize_Drupal_menu(pruned_GN_Nodes[0],LOGFILE,keyfile,debug)
 	# Unlock the GN
