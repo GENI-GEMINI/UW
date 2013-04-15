@@ -56,7 +56,7 @@ def Usage():
                                             [default: ~/.ssl/password]"""
 
 try:
-    opts, REQARGS = getopt.gnu_getopt( sys.argv[ 1: ], "dhx:k:f:n:j:p:",
+    opts, REQARGS = getopt.gnu_getopt( sys.argv[ 1: ], "dhxk:f:n:j:p:",
                                    [ "debug","help","no_force_refresh","pkey=","certificate=",
                                      "slicename=","loadFromFile="
                                      "passphrase="] )
@@ -170,6 +170,10 @@ if (UserOBJ['code'] == 0):
 	USERURN = UserInfo['userurn']
 	user_crypt = UserInfo['user_crypt']
 	user_public_key = UserInfo['public_key']
+	framework = UserInfo['framework']
+	if(framework == 'portal'):
+		msg = "Please make sure that the below shown SSH Public key is in the list of keys registered at your Slice Authority\n"+user_public_key+"\n"
+		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 	#CERT_ISSUER = UserInfo['certificate_issuer']
 else:
 	msg = "User not identified : "+ UserOBJ['output']

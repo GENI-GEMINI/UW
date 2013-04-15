@@ -85,6 +85,7 @@ EXP_NODE_tmppath = "/tmp"
 EXP_TMP_PATH = "/tmp"
 TRUE = 1
 FALSE = 0
+DISABLE_ACTIVE = FALSE
 ERROR = "ERROR"
 printtoscreen=1
 dontprinttoscreen=0
@@ -457,42 +458,6 @@ def precheckNodes(GN_Node,MP_Nodes,keyfile,LOGFILE,debug):
 
 	
 	return TRUE,msg
-
-#
-# Collect GEMINI SERVICES info from node
-#
-
-def get_gservices_from_node(node):
-
-	my_services = {}
-	my_services['active'] = {}
-	my_services['passive'] = {}
-	my_services['active']['install'] = {}
-	my_services['active']['enable'] = {}
-	my_services['passive']['install'] = {}
-	my_services['passive']['enable'] = {}
-	active = node.getElementsByTagName('gemini:active')
-	passive = node.getElementsByTagName('gemini:passive')
-
-	if(len(active) > 0):
-		if (active[0].hasAttribute('install')):
-			my_services['active']['install'] = active[0].getAttribute('install')
-			pass
-
-		if (active[0].hasAttribute('enable') and my_services['active']['install'] == 'yes'):
-			my_services['active']['enable'] = active[0].getAttribute('enable')
-			pass
-
-	if(len(passive) > 0):
-		if (passive[0].hasAttribute('install')):
-			my_services['passive']['install'] = passive[0].getAttribute('install')
-			pass
-
-		if (passive[0].hasAttribute('enable') and my_services['passive']['install'] == 'yes' ):
-			my_services['passive']['enable'] = passive[0].getAttribute('enable')
-			pass
-
-	return my_services
 
 #
 # Ask user if he/she want to instrumentize all the CM's in the topology
@@ -953,6 +918,11 @@ def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,SLICEUUID,LAMP
 	global INSTOOLS_repo_url
 
 	state = TRUE
+
+	if (DISABLE_ACTIVE):
+		msg = "Will not enable Active Services due to UNIS Failure"
+		write_to_log(LOGFILE,msg,printtoscreen,debug)
+		return state
 	# Place LAMP CERT on all nodes regardless in case we need it later
 	lpc = tempfile.NamedTemporaryFile()
 	cert_file = lpc.name
