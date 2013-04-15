@@ -61,7 +61,7 @@ def Usage():
                                             [default: ~/.ssl/password]"""
 
 try:
-    opts, REQARGS = getopt.gnu_getopt( sys.argv[ 1: ], "dhx:k:f:n:j:p:",
+    opts, REQARGS = getopt.gnu_getopt( sys.argv[ 1: ], "dhxk:f:n:j:p:",
                                    [ "debug","help","no_force_refresh","pkey=","certificate=",
                                      "slicename=","loadFromFile="
                                      "passphrase="] )
