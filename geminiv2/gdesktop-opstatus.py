@@ -305,7 +305,12 @@ if (len(GN_Nodes) == 0):
 status = {}
 for Node in GN_Nodes:
 
-	init_status = gemini_util.getLockStatus(Node,LOGFILE,keyfile,debug)
+	(init_status,ret_code,err_msg) = gemini_util.getLockStatus(Node,LOGFILE,keyfile,debug)
+	if(ret_code == -1 ):
+		msg = "ERROR: "+err_msg
+       		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+		sys.exit(1)
+
 	if(init_status == ""):
 		init_status = "NOT_INITIALIZED"
 	status[Node['sliver_id']] = init_status
