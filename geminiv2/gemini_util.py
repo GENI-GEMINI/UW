@@ -351,18 +351,21 @@ def isOSSupported(Node,LOGFILE,keyfile,debug):
 	global EXP_NODE_tmppath
 	global INSTOOLS_repo_url
 
-	cmd = 'sudo ls '
 	hostname = Node['login_hostname']
 	port = Node['login_port']
 	username = Node['login_username']
 	vid = Node['nodeid']
 
+	SUDO = 'sudo '
+	if(isRoot(username)):
+		SUDO = ''
 
 	msg = "Checking if OS on Node : \""+vid+"\" is supported"
 	write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
 
-	pre_cmd ="sudo rm -rf "+measure_scripts_path+"/INSTALL_DEFS.sh "+EXP_NODE_tmppath+"/INSTALL_DEFS.tgz;sudo mkdir -p "+measure_scripts_path+";sudo wget -P "+EXP_NODE_tmppath+" "+INSTOOLS_repo_url+"tarballs/INSTALL_DEFS.tgz;sudo tar xzf "+EXP_NODE_tmppath+"/INSTALL_DEFS.tgz -C "+measure_scripts_path+";"
-	additional_cmd ="sudo rm -rf /tmp/version_check.sh;wget -P /tmp "+INSTOOLS_repo_url+"scripts/version_check.sh;chmod +x "+EXP_NODE_tmppath+"/version_check.sh;sudo "+EXP_NODE_tmppath+"/version_check.sh "
+	pre_cmd = SUDO+"rm -rf "+measure_scripts_path+"/INSTALL_DEFS.sh "+EXP_NODE_tmppath+"/INSTALL_DEFS.tgz;"+SUDO+"mkdir -p "+measure_scripts_path+";"+SUDO+"wget -P "+EXP_NODE_tmppath+" "+INSTOOLS_repo_url+"tarballs/INSTALL_DEFS.tgz;"+SUDO+"tar xzf "+EXP_NODE_tmppath+"/INSTALL_DEFS.tgz -C "+measure_scripts_path+";"
+	additional_cmd = SUDO+"rm -rf /tmp/version_check.sh;wget -P /tmp "+INSTOOLS_repo_url+"scripts/version_check.sh;chmod +x "+EXP_NODE_tmppath+"/version_check.sh;"+SUDO+" "+EXP_NODE_tmppath+"/version_check.sh "
+	cmd = SUDO+'ls '
 
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',pre_cmd+additional_cmd,None,None)
 	write_to_processlog(out_ssh,err_ssh,LOGFILE)
@@ -395,6 +398,12 @@ def pruneNodes(Nodes,AM_URN,GN,LOGFILE,debug):
 
 	return prunedNodes
 
+def isRoot(username):
+	if(username == 'root'):
+		return TRUE
+	else:
+		return FALSE
+
 #
 # Check if machine is reachable and then perform OS support version check
 # This is usually done before instrumentizing
@@ -413,8 +422,11 @@ def precheckNodes(GN_Node,MP_Nodes,keyfile,LOGFILE,debug):
 	username = GN_Node['login_username']
 	vid = GN_Node['nodeid']
 
+	SUDO = 'sudo '
+	if(isRoot(username)):
+		SUDO = ''
 	pre_cmd ="rm -rf "+EXP_NODE_tmppath+"/sudoers.tgz;wget -P "+EXP_NODE_tmppath+" "+INSTOOLS_repo_url+"tarballs/sudoers.tgz;";
-	cmd = "sudo tar xzf "+EXP_NODE_tmppath+"/sudoers.tgz -C /"
+	cmd = SUDO+"tar xzf "+EXP_NODE_tmppath+"/sudoers.tgz -C /"
 
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',pre_cmd,None,None)
 	write_to_processlog(out_ssh,err_ssh,LOGFILE)
@@ -438,8 +450,11 @@ def precheckNodes(GN_Node,MP_Nodes,keyfile,LOGFILE,debug):
 		username = Node['login_username']
 		vid = Node['nodeid']
 
+		SUDO = 'sudo '
+		if(isRoot(username)):
+			SUDO = ''
 		pre_cmd ="rm -rf "+EXP_NODE_tmppath+"/sudoers.tgz;wget -P "+EXP_NODE_tmppath+" "+INSTOOLS_repo_url+"tarballs/sudoers.tgz;";
-		cmd = "sudo tar xzf "+EXP_NODE_tmppath+"/sudoers.tgz -C /"
+		cmd = SUDO+"tar xzf "+EXP_NODE_tmppath+"/sudoers.tgz -C /"
 
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',pre_cmd,None,None)
 		write_to_processlog(out_ssh,err_ssh,LOGFILE)
@@ -620,7 +635,7 @@ def getLockStatus(Node,LOGFILE,keyfile,debug):
 	sendcmd = 'cat '+INSTOOLS_LOCK+';'
 
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,keyfile,'ssh',sendcmd,None,None)
-	return out_ssh.rstrip()
+	return out_ssh.rstrip(),ret_code,err_ssh
 	
 
 #
@@ -632,7 +647,9 @@ def lock_unlock_MC(GN_Node,what_to_do,LOGFILE,keyfile,debug):
 	global INSTOOLS_LOCK
 	msg = ""
 	while(1):
-		lockstatus = getLockStatus(GN_Node,LOGFILE,keyfile,debug)
+		(lockstatus,ret_code,error_msg) = getLockStatus(GN_Node,LOGFILE,keyfile,debug)
+		if(ret_code == -1 ):
+			return FALSE,error_msg
 		if(lockstatus != "" and  what_to_do == "init_lock"):
 			msg = "GeniDesktop has a status of "+lockstatus+"..\nCannot start another instance"
 			return FALSE,msg
