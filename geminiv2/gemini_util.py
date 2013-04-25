@@ -1031,54 +1031,92 @@ def makeInstrumentizeProxy(lifetime,auth_uuid,LOGFILE,debug):
 		
 	return result
 
-def install_irods_Certs(GN_Nodes,pKey,lifetime,LOGFILE,debug):
+def generate_all_proxycerts(lifetime,auth_uuid,LOGFILE,debug):
+
 	global passphrase
+
+	#Irods Proxy cert generation
 	f1 = tempfile.NamedTemporaryFile(delete=False)
 	f2 = tempfile.NamedTemporaryFile(delete=False)
-        proxycert_file = f1.name
-        proxykey_file = f2.name
+        irods_proxycert_file = f1.name
+        irods_proxykey_file = f2.name
 
 	write_to_log(LOGFILE,"Generating proxy certificate for Irods service",printtoscreen,debug)
-	genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,proxycert_file,proxykey_file, "irods",lifetime,passphrase)
+	genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,irods_proxycert_file,irods_proxykey_file,"irods",lifetime,passphrase)
 	f2.seek(0)
 	f1.seek(0,2)
 	f1.write("\n"+f2.read())
 	f1.flush()
 
+	os.remove(irods_proxykey_file)
 
-	for node in GN_Nodes:
-		hostname = node['login_hostname']
-		port = node['login_port']
-		username = node['login_username']
-		vid = node['nodeid']
-		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'scp',None,proxycert_file,'/tmp/'+os.path.basename(proxycert_file))
-		write_to_processlog(out_ssh,err_ssh,LOGFILE)
-	
-		cmd = 'sudo install -D /tmp/'+os.path.basename(proxycert_file)+' '+GN_IRODS_CERT+' -o root -g root -m 600;'
-		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
-		write_to_processlog(out_ssh,err_ssh,LOGFILE)
-
-	os.remove(proxycert_file)
-	os.remove(proxykey_file)
-
-def install_GN_Certs(GN_Nodes,pKey,lifetime,auth_uuid,LOGFILE,debug):
-	global passphrase
-	f1 = tempfile.NamedTemporaryFile(delete=False)
-	f2 = tempfile.NamedTemporaryFile(delete=False)
+	#GN Proxy Cert generation for Active services
 	f3 = tempfile.NamedTemporaryFile(delete=False)
-        gn_ms_proxycert_file = f1.name
-        gn_ms_proxykey_file = f2.name
-        gn_ms_proxyder_file = f3.name
+	f4 = tempfile.NamedTemporaryFile(delete=False)
+	f5 = tempfile.NamedTemporaryFile(delete=False)
+        gn_ms_proxycert_file = f3.name
+        gn_ms_proxykey_file = f4.name
+        gn_ms_proxyder_file = f5.name
 
 	role = "slice_admin_for_%s" % auth_uuid.replace("-", "")
-
-	write_to_log(LOGFILE,"Generating GN_MS certificates",printtoscreen,debug)
+	write_to_log(LOGFILE,"Generating proxy certificates for GN_MS",printtoscreen,debug)
 	genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,gn_ms_proxycert_file,gn_ms_proxykey_file, "GN-MS",lifetime,passphrase)
 	genproxy.make_attribute_cert(CERTIFICATE,CERTIFICATE,gn_ms_proxycert_file,role,gn_ms_proxyder_file,passphrase)
 	# send attribute certs to UNIS
 	f = open(gn_ms_proxyder_file)
 	postDataToUNIS(gn_ms_proxykey_file,gn_ms_proxycert_file,"/credentials/geniuser",f,LOGFILE,debug)
 	f.close()
+	os.remove(gn_ms_proxyder_file)
+
+
+	#MP Proxy Cert generation for Active services
+	f6 = tempfile.NamedTemporaryFile(delete=False)
+	f7 = tempfile.NamedTemporaryFile(delete=False)
+	f8 = tempfile.NamedTemporaryFile(delete=False)
+        mp_blipp_proxycert_file = f6.name
+        mp_blipp_proxykey_file = f7.name
+        mp_blipp_proxyder_file = f8.name
+
+	role = "slice_admin_for_%s" % auth_uuid.replace("-","")
+	write_to_log(LOGFILE,"Generating proxy certificates for MP Blipp",printtoscreen,debug)
+	genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,mp_blipp_proxycert_file,mp_blipp_proxykey_file, "blipp",lifetime,passphrase)
+	genproxy.make_attribute_cert(CERTIFICATE,CERTIFICATE,mp_blipp_proxycert_file,role,mp_blipp_proxyder_file,passphrase)
+	# send attribute certs to UNIS
+	f = open(mp_blipp_proxyder_file)
+	postDataToUNIS(mp_blipp_proxykey_file,mp_blipp_proxycert_file,"/credentials/geniuser",f,LOGFILE,debug)
+	f.close()
+	os.remove(mp_blipp_proxyder_file)
+
+	return (gn_ms_proxycert_file,gn_ms_proxykey_file,mp_blipp_proxycert_file,mp_blipp_proxykey_file,irods_proxycert_file)
+
+def delete_all_temp_proxyfiles(files,LOGFILE,debug):
+
+	for file_name in files:
+		msg = "Deleteing "+file_name
+		write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
+		os.remove(file_name)
+	return True
+
+def install_irods_Certs(GN_Nodes,pKey,proxycert_file,LOGFILE,debug):
+
+	for node in GN_Nodes:
+		hostname = node['login_hostname']
+		port = node['login_port']
+		username = node['login_username']
+		vid = node['nodeid']
+
+		write_to_log(LOGFILE,"Installing Irods proxy certificate on "+vid,printtoscreen,debug)
+
+		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'scp',None,proxycert_file,'/tmp/'+os.path.basename(proxycert_file))
+		write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	
+		cmd = 'sudo install -D /tmp/'+os.path.basename(proxycert_file)+' '+GN_IRODS_CERT+' -o root -g root -m 600;'
+		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
+		write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	pass
+
+
+def install_GN_Certs(GN_Nodes,pKey,gn_ms_proxycert_file,gn_ms_proxykey_file,LOGFILE,debug):
 
 	for node in GN_Nodes:
 		hostname = node['login_hostname']
@@ -1086,6 +1124,8 @@ def install_GN_Certs(GN_Nodes,pKey,lifetime,auth_uuid,LOGFILE,debug):
 		username = node['login_username']
 		vid = node['nodeid']
 		
+		write_to_log(LOGFILE,"Installing GN_MS proxy certificate on "+vid,printtoscreen,debug)
+
 		# scp these via sshConnection...
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'scp',None,gn_ms_proxycert_file,'/tmp/'+os.path.basename(gn_ms_proxycert_file))
 		write_to_processlog(out_ssh,err_ssh,LOGFILE)
@@ -1098,28 +1138,9 @@ def install_GN_Certs(GN_Nodes,pKey,lifetime,auth_uuid,LOGFILE,debug):
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
 		write_to_processlog(out_ssh,err_ssh,LOGFILE)
 
-	os.remove(gn_ms_proxycert_file)
-	os.remove(gn_ms_proxykey_file)
-	os.remove(gn_ms_proxyder_file)
+	pass
 
-
-def install_MP_Certs(MP_Nodes,pKey,lifetime,auth_uuid,LOGFILE,debug):
-	global passphrase
-	f1 = tempfile.NamedTemporaryFile(delete=False)
-	f2 = tempfile.NamedTemporaryFile(delete=False)
-	f3 = tempfile.NamedTemporaryFile(delete=False)
-        mp_blipp_proxycert_file = f1.name
-        mp_blipp_proxykey_file = f2.name
-        mp_blipp_proxyder_file = f3.name
-
-	role = "slice_admin_for_%s" % auth_uuid.replace("-","")
-	write_to_log(LOGFILE,"Generating MP Blipp certificates",printtoscreen,debug)
-	genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,mp_blipp_proxycert_file,mp_blipp_proxykey_file, "blipp",lifetime,passphrase)
-	genproxy.make_attribute_cert(CERTIFICATE,CERTIFICATE,mp_blipp_proxycert_file,role,mp_blipp_proxyder_file,passphrase)
-	# send attribute certs to UNIS
-	f = open(mp_blipp_proxyder_file)
-	postDataToUNIS(mp_blipp_proxykey_file,mp_blipp_proxycert_file,"/credentials/geniuser",f,LOGFILE,debug)
-	f.close()
+def install_MP_Certs(MP_Nodes,pKey,mp_blipp_proxycert_file,mp_blipp_proxykey_file,LOGFILE,debug):
 
         for node in MP_Nodes:
 		hostname = node['login_hostname']
@@ -1127,6 +1148,7 @@ def install_MP_Certs(MP_Nodes,pKey,lifetime,auth_uuid,LOGFILE,debug):
 		username = node['login_username']
 		vid = node['nodeid']
 
+		write_to_log(LOGFILE,"Installing MP_Blipp proxy certificate on "+vid,printtoscreen,debug)
 	
 		# scp these via sshConnection...
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'scp',None,mp_blipp_proxycert_file,'/tmp/'+os.path.basename(mp_blipp_proxycert_file))
@@ -1139,9 +1161,7 @@ def install_MP_Certs(MP_Nodes,pKey,lifetime,auth_uuid,LOGFILE,debug):
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
 		write_to_processlog(out_ssh,err_ssh,LOGFILE)
 
-	os.remove(mp_blipp_proxycert_file)
-	os.remove(mp_blipp_proxykey_file)
-	os.remove(mp_blipp_proxyder_file)
+	pass
 
 def createBlippServiceEntries(MP_Nodes,GN_Node,slice_uuid,LOGFILE,debug):
 	service_desc = dict()

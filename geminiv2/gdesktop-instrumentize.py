@@ -388,6 +388,12 @@ else:
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 		gemini_util.DISABLE_ACTIVE = gemini_util.TRUE
 
+gn_ms_proxycert_file = None
+gn_ms_proxykey_file= None
+mp_blipp_proxycert_file = None
+mp_blipp_proxykey_file = None 
+irods_proxycert_file = None
+(gn_ms_proxycert_file,gn_ms_proxykey_file,mp_blipp_proxycert_file,mp_blipp_proxykey_file,irods_proxycert_file) = gemini_util.generate_all_proxycerts(slice_lifetime,slice_uuid,LOGFILE,debug)
 for my_manager in managers:
 
 	# STEP 1: Check nodes for OS Compatibilty
@@ -443,12 +449,12 @@ for my_manager in managers:
 	gemini_util.vnc_passwd_create(pruned_MP_Nodes,pruned_GN_Nodes[0],LOGFILE,pKey,debug)
 	gemini_util.drupal_account_create(pruned_GN_Nodes[0],LOGFILE,pKey,debug)
 
-	msg = "Generating and installing certificates"
+	msg = "Installing Proxy Certificates"
 	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 	if(not gemini_util.DISABLE_ACTIVE):
-		gemini_util.install_GN_Certs(pruned_GN_Nodes,pKey,slice_lifetime,slice_uuid,LOGFILE,debug)
-		gemini_util.install_MP_Certs(pruned_MP_Nodes,pKey,slice_lifetime,slice_uuid,LOGFILE,debug)
-	gemini_util.install_irods_Certs(pruned_GN_Nodes,pKey,slice_lifetime,LOGFILE,debug)
+		gemini_util.install_GN_Certs(pruned_GN_Nodes,pKey,gn_ms_proxycert_file,gn_ms_proxykey_file,LOGFILE,debug)
+		gemini_util.install_MP_Certs(pruned_MP_Nodes,pKey,mp_blipp_proxycert_file,mp_blipp_proxykey_file,LOGFILE,debug)
+	gemini_util.install_irods_Certs(pruned_GN_Nodes,pKey,irods_proxycert_file,LOGFILE,debug)
 
 	if(not gemini_util.DISABLE_ACTIVE):
 		msg = "Creating BLiPP service configurations, sending to UNIS"
@@ -467,10 +473,10 @@ for my_manager in managers:
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 		sys.exit(1)
 	DONE=1
-
-
-os.remove(gemini_util.PROXY_CERT)
-os.remove(gemini_util.PROXY_KEY)
+tmp_proxyfiles = [gemini_util.PROXY_CERT,gemini_util.PROXY_KEY,gn_ms_proxycert_file,gn_ms_proxykey_file,mp_blipp_proxycert_file,mp_blipp_proxykey_file,irods_proxycert_file]
+status = gemini_util.delete_all_temp_proxyfiles(tmp_proxyfiles,LOGFILE,debug)
+#os.remove(gemini_util.PROXY_CERT)
+#os.remove(gemini_util.PROXY_KEY)
 if(DONE):
 	msg = "Gemini Instrumentize Complete\n Go to the GeniDesktop to login"
 	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
