@@ -79,6 +79,9 @@ for opt, arg in opts:
 	if(not (keyfile != '' and os.path.isfile(keyfile))):
 		print "Please provide a valid private key file"
 		sys.exit(1)
+	else:
+		SSH_pkey = gemini_util.getPkey(keyfile,"SSH key")
+	
     elif opt in ( "-h", "--help" ):
         Usage()
         sys.exit( 0 )
@@ -114,19 +117,19 @@ except:
         gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 	sys.exit(1)
 
-# Check if passphrase provided is valid
+
+
+
+# Check if passphrase provided for certificate is valid
 # If passphrase is not provided prompt for it.
-try:
-	ctx = M2Crypto.SSL.Context("sslv23")
-	ctx.load_cert(gemini_util.CERTIFICATE,gemini_util.CERTIFICATE,gemini_util.PassPhraseCB)
-	(CERT_ISSUER,username) = gemini_util.getCert_issuer_n_username()
-except M2Crypto.SSL.SSLError:
-	msg = "Invalid passphrase provided"
-        gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-	sys.exit(1)
+
+CERT_pkey = gemini_util.getPkey(gemini_util.CERTIFICATE,"certificate")
+(CERT_ISSUER,username) = gemini_util.getCert_issuer_n_username()
 
 if(not (keyfile != '' and os.path.isfile(keyfile))):
-	keyfile = gemini_util.CERTIFICATE
+	pKey = CERT_pkey
+else:
+	pKey = SSH_pkey
 
 if(not FILE):
 	#loading cache file
@@ -305,7 +308,7 @@ if (len(GN_Nodes) == 0):
 status = {}
 for Node in GN_Nodes:
 
-	(init_status,ret_code,err_msg) = gemini_util.getLockStatus(Node,LOGFILE,keyfile,debug)
+	(init_status,ret_code,err_msg) = gemini_util.getLockStatus(Node,LOGFILE,pKey,debug)
 	if(ret_code == -1 ):
 		msg = "ERROR: "+err_msg
        		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)

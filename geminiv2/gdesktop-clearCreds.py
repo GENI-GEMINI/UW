@@ -77,14 +77,8 @@ except:
 
 # Check if passphrase provided is valid
 # If passphrase is not provided prompt for it.
-try:
-	ctx = M2Crypto.SSL.Context("sslv23")
-	ctx.load_cert(gemini_util.CERTIFICATE,gemini_util.CERTIFICATE,gemini_util.PassPhraseCB)
-	(CERT_ISSUER,username) = gemini_util.getCert_issuer_n_username()
-except M2Crypto.SSL.SSLError:
-	msg = "Invalid passphrase provided"
-        gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-	sys.exit(1)
+CERT_pkey = gemini_util.getPkey(gemini_util.CERTIFICATE,"certificate")
+(CERT_ISSUER,username) = gemini_util.getCert_issuer_n_username()
 
 msg = "Fetching User Info from the GeniDesktop Parser"
 gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)

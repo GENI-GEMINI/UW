@@ -79,6 +79,8 @@ for opt, arg in opts:
 	if(not (keyfile != '' and os.path.isfile(keyfile))):
 		print "Please provide a valid private key file"
 		sys.exit(1)
+	else:
+		SSH_pkey = gemini_util.getPkey(keyfile,"SSH key")
     elif opt in ( "-h", "--help" ):
         Usage()
         sys.exit( 0 )
@@ -112,17 +114,13 @@ except:
 
 # Check if passphrase provided is valid
 # If passphrase is not provided prompt for it.
-try:
-	ctx = M2Crypto.SSL.Context("sslv23")
-	ctx.load_cert(gemini_util.CERTIFICATE,gemini_util.CERTIFICATE,gemini_util.PassPhraseCB)
-	(CERT_ISSUER,username) = gemini_util.getCert_issuer_n_username()
-except M2Crypto.SSL.SSLError:
-	msg = "Invalid passphrase provided"
-        gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-	sys.exit(1)
+CERT_pkey = gemini_util.getPkey(gemini_util.CERTIFICATE,"certificate")
+(CERT_ISSUER,username) = gemini_util.getCert_issuer_n_username()
 
 if(not (keyfile != '' and os.path.isfile(keyfile))):
-	keyfile = gemini_util.CERTIFICATE
+	pKey = CERT_pkey
+else:
+	pKey = SSH_pkey
 
 if(not FILE):
 	#loading cache file
@@ -327,7 +325,7 @@ for my_manager in managers:
 
 	pruned_MP_Nodes = gemini_util.pruneNodes(MP_Nodes,my_manager,'',LOGFILE,debug)
 
-	(result,msg) = gemini_util.precheckNodes(pruned_GN_Nodes[0],pruned_MP_Nodes,keyfile,LOGFILE,debug)
+	(result,msg) = gemini_util.precheckNodes(pruned_GN_Nodes[0],pruned_MP_Nodes,pKey,LOGFILE,debug)
 	if(result):
 		msg = "All nodes at AM --> "+my_manager+" are GEMINI capable.\nWill proceed with the GENI Desktop Init Process"
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
@@ -337,7 +335,7 @@ for my_manager in managers:
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 		sys.exit(1)
 
-	(status,msg) = gemini_util.lock_unlock_MC(pruned_GN_Nodes[0],"init_lock",LOGFILE,keyfile,debug)
+	(status,msg) = gemini_util.lock_unlock_MC(pruned_GN_Nodes[0],"init_lock",LOGFILE,pKey,debug)
 	if(not status):
 		msg = msg + "\nConfiguring next AM if available"
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
@@ -347,7 +345,7 @@ for my_manager in managers:
 
 
 	#Place on the GN Node - DRUPAL_ADMIN_PASSWORD , userurn , sliceurn , slicename, cmurn, cmhrn , vnc_passwd, topinfo, portal_public_key
-	(result,msg) = gemini_util.dump_Expinfo_on_GN(pruned_GN_Nodes[0],USERURN,email_id,user_password_for_drupal,SLICEURN,my_manager,dpadmin_username,dpadmin_passwd,slice_crypt,debug,LOGFILE,keyfile)
+	(result,msg) = gemini_util.dump_Expinfo_on_GN(pruned_GN_Nodes[0],USERURN,email_id,user_password_for_drupal,SLICEURN,my_manager,dpadmin_username,dpadmin_passwd,slice_crypt,debug,LOGFILE,pKey)
 	if(result):
 		msg = "GN that monitors MP Nodes at  "+my_manager+" has all the Exp info it needs. Will now proceed with the Initialization process."
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
@@ -360,7 +358,7 @@ for my_manager in managers:
 	# STEP 2 : Download Passive measurement scripts and start ssh-key generator on the GN
 	# STEP 2b : Save MC public key onto a file pn GN, fetch it from the GN and place it on all MP Nodes
 	# STEP 3 : Install Shell in a box on all nodes and generate the Shellinabox config
-	(result,msg) = gemini_util.install_keys_plus_shell_in_a_box(pruned_GN_Nodes[0],pruned_MP_Nodes,user_public_key,debug,LOGFILE,keyfile)
+	(result,msg) = gemini_util.install_keys_plus_shell_in_a_box(pruned_GN_Nodes[0],pruned_MP_Nodes,user_public_key,debug,LOGFILE,pKey)
 	if(result):
 		msg = "All nodes at AM --> "+my_manager+" have been Initialized."
 		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
