@@ -23,10 +23,9 @@ import sys
 import getopt
 import os
 import time
-import M2Crypto
-#import urllib
 import hashlib
 import json
+import multiprocessing
 import gemini_util	# Import user defined routines
 
 other_details = ""
@@ -55,6 +54,21 @@ def Usage():
     -p file, --passphrase=file          read passphrase from file
                                             [default: ~/.ssl/password]"""
 
+def opStatusProcess(Node,queue):
+	global pKey
+
+	(init_status,ret_code,err_msg) = gemini_util.getLockStatus(Node,pKey)
+	if(ret_code == -1 ):
+		msg = "ERROR: "+err_msg
+       		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+		sys.exit(1)
+
+	if(init_status == ""):
+		init_status = "NOT_INITIALIZED"
+
+	queue.put([Node['sliver_id'],init_status])
+	return  
+
 try:
     opts, REQARGS = getopt.gnu_getopt( sys.argv[ 1: ], "dhxk:f:n:j:p:",
                                    [ "debug","help","no_force_refresh","pkey=","certificate=",
@@ -69,19 +83,11 @@ args = REQARGS
 
 for opt, arg in opts:
     if opt in ( "-d", "--debug" ):
-        debug = 1
+        gemini_util.debug = 1
     elif opt in ( "-x","--no_force_refresh" ):
         force_refresh = '0'
     elif opt in ( "-f", "--certificatefile" ):
         gemini_util.CERTIFICATE = arg
-    elif opt in ( "-k", "--pkey" ):
-        keyfile = arg
-	if(not (keyfile != '' and os.path.isfile(keyfile))):
-		print "Please provide a valid private key file"
-		sys.exit(1)
-	else:
-		SSH_pkey = gemini_util.getPkey(keyfile,"SSH key")
-	
     elif opt in ( "-h", "--help" ):
         Usage()
         sys.exit( 0 )
@@ -91,6 +97,12 @@ for opt, arg in opts:
 	if(gemini_util.SLICENAME == ''):
 		print "Please provide a slicename"
 		sys.exit(1)
+	else:
+		mylogbase = gemini_util.getLOGBASE()
+		LOCALTIME = time.strftime("%Y%m%dT%H:%M:%S",time.localtime(time.time()))
+		LOGFILE = mylogbase+"/gdesktop-opstatus-"+gemini_util.SLICENAME+"_"+LOCALTIME+".log"
+		gemini_util.ensure_dir(LOGFILE)
+		gemini_util.openLogPIPE(LOGFILE)
     elif opt in ( "-p", "--passphrasefile" ):
         gemini_util.PASSPHRASEFILE = arg
     elif opt in ( "-j", "--loadFromFile" ):
@@ -101,28 +113,23 @@ for opt, arg in opts:
 		sys.exit(1)
 	else:
 		f = open(FILE,'r')
-
+    elif opt in ( "-k", "--pkey" ):
+        keyfile = arg
+	if(not (keyfile != '' and os.path.isfile(keyfile))):
+		print "Please provide a valid private key file"
+		sys.exit(1)
+	else:
+		SSH_pkey = gemini_util.getPkey(keyfile,"SSH key")
 	
-
-
-mylogbase = gemini_util.getLOGBASE()
-LOCALTIME = time.strftime("%Y%m%dT%H:%M:%S",time.localtime(time.time()))
-LOGFILE = mylogbase+"/gdesktop-opstatus-"+gemini_util.SLICENAME+"_"+LOCALTIME+".log"
-gemini_util.ensure_dir(LOGFILE)
-
 try:
 	cf = open(gemini_util.CERTIFICATE,'r')
 except:
 	msg = "Error opening Certificate"
-        gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
-
-
-
 
 # Check if passphrase provided for certificate is valid
 # If passphrase is not provided prompt for it.
-
 CERT_pkey = gemini_util.getPkey(gemini_util.CERTIFICATE,"certificate")
 (CERT_ISSUER,username) = gemini_util.getCert_issuer_n_username()
 
@@ -138,7 +145,7 @@ if(not FILE):
 		FILE = ''
 	elif((time.time() - os.stat(FILE)[8] ) > gemini_util.cache_expiry): # Assumes that if cache file is older than 15 minutes dont use it.
 		msg = "Cache is empty or invalid :EXPIRED "+str(time.time() - os.stat(FILE)[8]  - gemini_util.cache_expiry )+' seconds ago'
-		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 		FILE = ''
 	else:
 		f = open(FILE,'r')
@@ -151,12 +158,12 @@ if(not FILE):
 
 if (FILE):
 	msg = "Fetching User Info from the Cache"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	UserJSON = f.readline()
 else:
 	msg = "Fetching User Info from the GeniDesktop Parser"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-	UserJSON = gemini_util.getUserinfoFromParser(cf.read(),gemini_util.passphrase,LOGFILE,debug)
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+	UserJSON = gemini_util.getUserinfoFromParser(cf.read(),gemini_util.passphrase)
 cf.close()
 try:
 	UserOBJ = json.loads(UserJSON)
@@ -167,10 +174,10 @@ except ValueError:
 		os.unlink(FILE)
 	
 	msg ="User JSON Loading Error"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
-gemini_util.write_to_log(LOGFILE,UserJSON,gemini_util.dontprinttoscreen,debug)
+gemini_util.write_to_log(UserJSON,gemini_util.dontprinttoscreen)
 if (UserOBJ['code'] == 0):
 	UserInfo = UserOBJ['output']
 	username = UserInfo['uid']
@@ -180,18 +187,18 @@ if (UserOBJ['code'] == 0):
 #	CERT_ISSUER = UserInfo['certificate_issuer']
 else:
 	msg = "User not identified : "+ UserOBJ['output']
-        gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 msg = "Found User Info for "+USERURN
-gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 if (FILE):
 	msg = "Fetching Slice Info from the Cache"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	SliceJSON = f.readline()
 else:
 	msg = "Fetching Slice Info from the GeniDesktop Parser"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-	SliceJSON = gemini_util.getSliceinfoFromParser(user_crypt,LOGFILE,debug)
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+	SliceJSON = gemini_util.getSliceinfoFromParser(user_crypt)
 try:
 	SliceOBJ = json.loads(SliceJSON)
 except ValueError:
@@ -200,14 +207,14 @@ except ValueError:
 		# So the next time its called again, fresh info from the parser is pulled
 		os.unlink(FILE)
 	msg ="Slice JSON Loading Error"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
-gemini_util.write_to_log(LOGFILE,SliceJSON,gemini_util.dontprinttoscreen,debug)
+gemini_util.write_to_log(SliceJSON,gemini_util.dontprinttoscreen)
 found = gemini_util.FALSE
 if (SliceOBJ['code'] != 0):
 	msg = "User/Slice not identified : "+ SliceOBJ['output']
-        gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
 Slices = SliceOBJ['output']
@@ -220,21 +227,21 @@ for  SliceInfo in Slices:
 
 if(not found):
 	msg = "Slice : "+gemini_util.SLICENAME+' does not exists'
-        gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
 msg = "Found Slice Info for "+SLICEURN
-gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 slice_crypt = SliceInfo['crypt']
 api = "getNodeInfo"
 if(FILE):
 	msg = "Fetching Manifest Info from the Cache"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	NodesJSON= f.readline()
 else:
 	msg = "Fetching Manifest Info from the GeniDesktop Parser"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-	NodesJSON = gemini_util.getJSONManifestFromParser(slice_crypt,gemini_util.SLICENAME,api,force_refresh,LOGFILE,debug)
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+	NodesJSON = gemini_util.getJSONManifestFromParser(slice_crypt,gemini_util.SLICENAME,api,force_refresh)
 try:
 	NodesOBJ = json.loads(NodesJSON.strip())
 except ValueError:
@@ -243,13 +250,13 @@ except ValueError:
 		# So the next time its called again, fresh info from the parser is pulled
 		os.unlink(FILE)
 	msg ="Nodes JSON Loading Error"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
-gemini_util.write_to_log(LOGFILE,NodesJSON,gemini_util.dontprinttoscreen,debug)
+gemini_util.write_to_log(NodesJSON,gemini_util.dontprinttoscreen)
 if(NodesOBJ['code'] != 0):
 	msg = NodesOBJ['output']+": No Manifest Available for : "+ SliceInfo['sliceurn']
-        gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
 Nodes = NodesOBJ['output']
@@ -282,12 +289,12 @@ for Node in Nodes:
 	"Its CMURN => "+cmurn+"\n"+ \
 	"Gemini Node Type => "+gemini_node_type+"\n"+ \
 	"MC Hostname => "+mchostname+"\n"+"**********************"
-        gemini_util.write_to_log(LOGFILE,msg,gemini_util.dontprinttoscreen,debug)
+        gemini_util.write_to_log(msg,gemini_util.dontprinttoscreen)
 
 msg = "***********************************\n"+\
 "You have "+str(len(MP_Nodes))+" MP Nodes and "+str(len(GN_Nodes))+" GN Nodes\n"+\
 "***********************************\n"
-gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 
 
 if(not FILE):
@@ -303,19 +310,31 @@ if(not FILE):
 
 if (len(GN_Nodes) == 0):
 	msg = "No GN Nodes Present. Will not proceed"
-        gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
+
 status = {}
+proclist = []
+results = []
 for Node in GN_Nodes:
 
-	(init_status,ret_code,err_msg) = gemini_util.getLockStatus(Node,LOGFILE,pKey,debug)
-	if(ret_code == -1 ):
-		msg = "ERROR: "+err_msg
-       		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-		sys.exit(1)
+	result_queue = multiprocessing.Queue()
+	p = multiprocessing.Process(target=opStatusProcess,args=(Node,result_queue,))
+	proclist.append(p)
+	p.start()                                                                                                                      
+	results.append(result_queue)
 
-	if(init_status == ""):
-		init_status = "NOT_INITIALIZED"
-	status[Node['sliver_id']] = init_status
+for i in proclist:
+	i.join()
+	if(i.exitcode != 0):
+		sys.exit(i.exitcode)
 
+for result in results:
+	if(not result.empty()):
+		l = result.get()
+		status[l[0]] = l[1]
+
+gemini_util.closeLogPIPE(LOGFILE)
 print json.dumps(status)
+
+

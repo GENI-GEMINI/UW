@@ -85,12 +85,13 @@ EXP_NODE_tmppath = "/tmp"
 EXP_TMP_PATH = "/tmp"
 TRUE = 1
 FALSE = 0
+debug = 0
 DISABLE_ACTIVE = FALSE
 ERROR = "ERROR"
 printtoscreen=1
 dontprinttoscreen=0
 SSH_pKey = None
-cert_pKey = None
+CERT_pKey = None
 SLICENAME       = ''
 cache_expiry = 60 * 10 # 10 minutes
 try:
@@ -104,6 +105,7 @@ PID = str(os.getpid())
 PROXY_CERT      = None
 PROXY_KEY       = None
 PROXY_ATTR      = None
+LOGFILE_HANDLE	= None
 
 BASE_CERT_DIR   = "/usr/local/etc/certs"
 GN_PROXY_CERT   = BASE_CERT_DIR+'/gn_cert.pem'
@@ -134,7 +136,13 @@ def print_timing(func):
         return res
     return wrapper
 
-def install_keys_plus_shell_in_a_box(GN_Node,MP_Nodes,my_public_key,debug,LOGFILE,pKey):
+def dots():
+	while(1):
+		print ('%1s') % ("."),
+		time.sleep(5)
+	return
+
+def install_keys_plus_shell_in_a_box(GN_Node,MP_Nodes,my_public_key,pKey):
 
 	MC_NODE_keypath = "/tmp"
 	LOCAL_tmppath = "/tmp"
@@ -154,22 +162,22 @@ def install_keys_plus_shell_in_a_box(GN_Node,MP_Nodes,my_public_key,debug,LOGFIL
 	username = GN_Node['login_username']
 	vid = GN_Node['nodeid']
 	if(socket.getfqdn() != "genidesktop.netlab.uky.edu"):
-		msg = "Placing your ssh public key for Genidesktop on "+hostname
-		write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
+		msg = "Placing your ssh public key for Genidesktop on "+vid
+		write_to_log(msg,dontprinttoscreen)
 		command = "cd "+EXP_TMP_PATH+";wget -q -P "+EXP_TMP_PATH+" "+INSTOOLS_repo_url+"tarballs/addmypublickey.tgz;tar xzf addmypublickey.tgz;./addmypublickey.sh "+username+' "'+my_public_key+'";'
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',command,None,None)
-		write_to_processlog(out_ssh,err_ssh,LOGFILE)
+		write_to_processlog(out_ssh,err_ssh)
 		if (ret_code != 0):
-			msg =  "Problem Initializing the GN Node "+str(hostname)+"\n"+str(err_ssh)
+			msg =  "Problem Initializing the GN Node "+str(vid)+"\n"+str(err_ssh)
 			return FALSE,msg
 		pass
 
 
 	GN_cmd ="cd "+EXP_TMP_PATH+";sudo rm -rf /tmp/gdesktop*;wget -q -P "+EXP_TMP_PATH+" "+INSTOOLS_repo_url+"tarballs/GDESKTOP_SETUP.tgz;tar xzf GDESKTOP_SETUP.tgz;sudo ./GDESKTOP_SETUP.sh GN init ;"
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',GN_cmd,None,None)
-	write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	write_to_processlog(out_ssh,err_ssh)
 	if (ret_code != 0):
-		msg =  "Problem Initializing the GN Node "+str(hostname)+"\n"+str(err_ssh)
+		msg =  "Problem Initializing the GN Node "+str(vid)+"\n"+str(err_ssh)
 		return FALSE,msg
 
 
@@ -178,11 +186,11 @@ def install_keys_plus_shell_in_a_box(GN_Node,MP_Nodes,my_public_key,debug,LOGFIL
         my_mckeyfile = f.name
 
 	#This get the public key of the measurement node to put on other nodes in your experiement
-	msg = "Fetching Measurement controller Public key"
-	write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
+	msg = "Fetching Global Node "+vid+"'s Public key"
+	write_to_log(msg,dontprinttoscreen)
 
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'scp_get',None,my_mckeyfile,public_key)
-	write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	write_to_processlog(out_ssh,err_ssh)
 
 	proclist = []
 	for Node in MP_Nodes:
@@ -193,28 +201,28 @@ def install_keys_plus_shell_in_a_box(GN_Node,MP_Nodes,my_public_key,debug,LOGFIL
 		username = Node['login_username']
 		vid = Node['nodeid']
 
-		msg = "Placing the Measurement controller's public key on Node:\""+vid+"\" to allow it to complete setup"
-		write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
+		msg = "Placing the Global Node "+GN_Node['nodeid']+"'s public key on Node:\""+vid+"\" to allow it to complete setup"
+		write_to_log(msg,dontprinttoscreen)
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'scp',None,my_mckeyfile,'/tmp/'+os.path.basename(my_mckeyfile))
-		write_to_processlog(out_ssh,err_ssh,LOGFILE)
+		write_to_processlog(out_ssh,err_ssh)
 		if(ret_code != 0):
 			msg = "SCP to "+hostname+":"+port+" failed "+ err_ssh
 			return FALSE,msg
 
 		if(socket.getfqdn() != "genidesktop.netlab.uky.edu"):
-			msg = "Placing your ssh public key for Genidesktop on "+hostname
-			write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
+			msg = "Placing your ssh public key for Genidesktop on "+vid
+			write_to_log(msg,dontprinttoscreen)
 			command = "cd "+EXP_TMP_PATH+";wget -q -P "+EXP_TMP_PATH+" "+INSTOOLS_repo_url+"tarballs/addmypublickey.tgz;tar xzf addmypublickey.tgz;./addmypublickey.sh "+username+' "'+my_public_key+'";'
 			(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',command,None,None)
-			write_to_processlog(out_ssh,err_ssh,LOGFILE)
+			write_to_processlog(out_ssh,err_ssh)
 			if (ret_code != 0):
-				msg =  "Problem Initializing the MP Node "+str(hostname)+"\n"+str(err_ssh)
+				msg =  "Problem Initializing the MP Node "+str(vid)+"\n"+str(err_ssh)
 				return FALSE,msg
 		pass
 
 
 		node_cmd ="sudo mv "+'/tmp/'+os.path.basename(my_mckeyfile)+" "+public_key_dest+";cd /tmp;sudo rm -rf GDESKTOP_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/GDESKTOP_SETUP.tgz;tar xzf GDESKTOP_SETUP.tgz;sudo ./GDESKTOP_SETUP.sh MP init"
-	        p = multiprocessing.Process(target=NodeInstall,args=(Node,node_cmd,'initialization',LOGFILE,debug,pKey,))
+	        p = multiprocessing.Process(target=NodeInstall,args=(Node,node_cmd,'initialization',pKey,))
 		proclist.append(p)
 		p.start()                                                                                                                      
         
@@ -235,16 +243,16 @@ def install_keys_plus_shell_in_a_box(GN_Node,MP_Nodes,my_public_key,debug,LOGFIL
 
 
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
-	write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	write_to_processlog(out_ssh,err_ssh)
 	if (ret_code != 0):
-		msg =  "Problem generating shell-in-a-box config for the GN Node "+str(hostname)+"\n"+str(err_ssh)
+		msg =  "Problem generating shell-in-a-box config for the GN Node "+str(vid)+"\n"+str(err_ssh)
 		return FALSE,msg
 
 	cmd = 'sudo sh -c "/etc/shellinabox/shellinabox_for_instools.sh > /dev/null 2>&1"'
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
-	write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	write_to_processlog(out_ssh,err_ssh)
 	if (ret_code != 0):
-		msg =  "Problem starting shell-in-a-box script on the GN Node "+str(hostname)+"\n"+str(err_ssh)
+		msg =  "Problem starting shell-in-a-box script on the GN Node "+str(vid)+"\n"+str(err_ssh)
 		return FALSE,msg
 
 	return TRUE,""
@@ -253,7 +261,7 @@ def install_keys_plus_shell_in_a_box(GN_Node,MP_Nodes,my_public_key,debug,LOGFIL
 # Put user credentials  onto MC and setup ssh keys for communication
 # between MC and other node
 #
-def InstallMP_Passive (MP_Nodes,GN_Node,debug, LOGFILE,pKey):
+def InstallMP_Passive (MP_Nodes,GN_Node,pKey):
 
 	MC_NODE_keypath = "/tmp"
 	LOCAL_tmppath = "/tmp"
@@ -262,7 +270,7 @@ def InstallMP_Passive (MP_Nodes,GN_Node,debug, LOGFILE,pKey):
 	
 	mc_ip = socket.gethostbyname(GN_Node['login_hostname'])
 	msg = "MC IP = "+mc_ip+"\n"
-	write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
+	write_to_log(msg,dontprinttoscreen)
 
 	node_cmd ="cd /tmp;sudo rm -rf GDESKTOP_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/GDESKTOP_SETUP.tgz;tar xzf GDESKTOP_SETUP.tgz;sudo ./GDESKTOP_SETUP.sh MP install "+mc_ip
 	
@@ -270,7 +278,7 @@ def InstallMP_Passive (MP_Nodes,GN_Node,debug, LOGFILE,pKey):
 	for Node in MP_Nodes:
 		if (Node['gemini_node_services_passive']["enable"] != 'yes'):
 			continue
-	        p = multiprocessing.Process(target=NodeInstall,args=(Node,node_cmd,'configuration',LOGFILE,debug,pKey,))
+	        p = multiprocessing.Process(target=NodeInstall,args=(Node,node_cmd,'configuration',pKey,))
 		proclist.append(p)
 		p.start()                                                                                                                      
         
@@ -280,7 +288,7 @@ def InstallMP_Passive (MP_Nodes,GN_Node,debug, LOGFILE,pKey):
 	return
 
 
-def NodeInstall(Node,node_cmd,action,LOGFILE,debug,pKey):
+def NodeInstall(Node,node_cmd,action,pKey):
 
 	my_cmurn = Node['cmurn']
 	sliver_urn = Node['sliver_id']
@@ -290,22 +298,22 @@ def NodeInstall(Node,node_cmd,action,LOGFILE,debug,pKey):
 	vid = Node['nodeid']
 
 	msg = "Running "+action+" Scripts on Node: \""+vid+"\""
-	write_to_log(LOGFILE,msg,printtoscreen,debug)
+	write_to_log(msg,printtoscreen)
 
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',node_cmd,None,None)
-	write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	write_to_processlog(out_ssh,err_ssh)
 	if (ret_code != 0):
 		msg =  "Problem at "+str(hostname)+"\n"+str(err_ssh)
 		return FALSE,msg
 
 	msg = "Node "+action+" Scripts on Node: \""+vid+"\" completed."
-	write_to_log(LOGFILE,msg,printtoscreen,debug)
+	write_to_log(msg,printtoscreen)
 
 
 #
 # Check to see if Node is up and ready
 #
-def check_if_ready(Node,LOGFILE,pKey,debug):
+def check_if_ready(Node,pKey):
 
 	global ssh
 	global INSTOOLS_LOCK
@@ -320,14 +328,14 @@ def check_if_ready(Node,LOGFILE,pKey,debug):
 	username = Node['login_username']
 	
 	msg = "Checking if Node :\""+vid+"\" is configured and ready"
-	write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
+	write_to_log(msg,dontprinttoscreen)
 
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd_filename,None,None)
-	write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	write_to_processlog(out_ssh,err_ssh)
 	if (ret_code == 0): # Means file exists
 		cmd = 'sudo cat '
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd+filename,None,None)
-		write_to_processlog(out_ssh,err_ssh,LOGFILE)
+		write_to_processlog(out_ssh,err_ssh)
 		if(err_ssh):
 			return FALSE
 
@@ -345,7 +353,7 @@ def check_if_ready(Node,LOGFILE,pKey,debug):
 #
 # Check for Supported OS
 #
-def isOSSupported(Node,LOGFILE,pKey,debug):
+def isOSSupported(Node,pKey):
 
 	global ssh
 	global NOTSUPPORTED_FLAG
@@ -363,17 +371,17 @@ def isOSSupported(Node,LOGFILE,pKey,debug):
 		SUDO = ''
 
 	msg = "Checking if OS on Node : \""+vid+"\" is supported"
-	write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
+	write_to_log(msg,dontprinttoscreen)
 
 	pre_cmd = SUDO+"rm -rf "+measure_scripts_path+"/INSTALL_DEFS.sh "+EXP_NODE_tmppath+"/INSTALL_DEFS.tgz;"+SUDO+"mkdir -p "+measure_scripts_path+";"+SUDO+"wget -P "+EXP_NODE_tmppath+" "+INSTOOLS_repo_url+"tarballs/INSTALL_DEFS.tgz;"+SUDO+"tar xzf "+EXP_NODE_tmppath+"/INSTALL_DEFS.tgz -C "+measure_scripts_path+";"
 	additional_cmd = SUDO+"rm -rf /tmp/version_check.sh;wget -P /tmp "+INSTOOLS_repo_url+"scripts/version_check.sh;chmod +x "+EXP_NODE_tmppath+"/version_check.sh;"+SUDO+" "+EXP_NODE_tmppath+"/version_check.sh "
 	cmd = SUDO+'ls '
 
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',pre_cmd+additional_cmd,None,None)
-	write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	write_to_processlog(out_ssh,err_ssh)
 
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd+SUPPORTED_FLAG,None,None)
-	write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	write_to_processlog(out_ssh,err_ssh)
    	if(ret_code == 0):
 	   return TRUE
 	else:
@@ -381,7 +389,7 @@ def isOSSupported(Node,LOGFILE,pKey,debug):
 
 	return TRUE
 
-def pruneNodes(Nodes,AM_URN,GN,LOGFILE,debug):
+def pruneNodes(Nodes,AM_URN,GN):
 	prunedNodes = []
 	if(GN == ''):
 		for Node in Nodes:
@@ -389,14 +397,14 @@ def pruneNodes(Nodes,AM_URN,GN,LOGFILE,debug):
 				prunedNodes.append(Node)
 			else:
 				msg = Node['nodeid']+" has been pruned\n"
-				write_to_log(LOGFILE,msg,printtoscreen,debug)
+				write_to_log(msg,dontprinttoscreen)
 	else:
 		for Node in Nodes:
 			if (Node['gemini_urn_to_monitor'] == AM_URN):
 				prunedNodes.append(Node)
 			else:
 				msg = Node['nodeid']+" has been pruned\n"
-				write_to_log(LOGFILE,msg,printtoscreen,debug)
+				write_to_log(msg,dontprinttoscreen)
 
 	return prunedNodes
 
@@ -410,7 +418,7 @@ def isRoot(username):
 # Check if machine is reachable and then perform OS support version check
 # This is usually done before instrumentizing
 #
-def precheckNodes(GN_Node,MP_Nodes,pKey,LOGFILE,debug):
+def precheckNodes(GN_Node,MP_Nodes,pKey):
 
 	global ssh
 	global EXP_NODE_tmppath
@@ -431,18 +439,18 @@ def precheckNodes(GN_Node,MP_Nodes,pKey,LOGFILE,debug):
 	cmd = SUDO+"tar xzf "+EXP_NODE_tmppath+"/sudoers.tgz -C /"
 
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',pre_cmd,None,None)
-	write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	write_to_processlog(out_ssh,err_ssh)
 
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
-	write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	write_to_processlog(out_ssh,err_ssh)
 	if (ret_code != 0):
 		msg =  " (Node : "+vid+") "+err_ssh+"\nInstrumentization will terminate. Please make sure your experiment is running"
 		return FALSE,msg
-	if (not isOSSupported(GN_Node,LOGFILE,pKey,debug)):
+	if (not isOSSupported(GN_Node,pKey)):
 		msg = "The Operating System on the Node \""+vid+"\" is not compatible with GEMINI"
 		return FALSE,msg
 	msg = "Node : \""+vid+"\" passed pre-check test"
-	write_to_log(LOGFILE,msg,printtoscreen,debug)
+	write_to_log(msg,printtoscreen)
 
 
 	Node = {}
@@ -459,19 +467,19 @@ def precheckNodes(GN_Node,MP_Nodes,pKey,LOGFILE,debug):
 		cmd = SUDO+"tar xzf "+EXP_NODE_tmppath+"/sudoers.tgz -C /"
 
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',pre_cmd,None,None)
-		write_to_processlog(out_ssh,err_ssh,LOGFILE)
+		write_to_processlog(out_ssh,err_ssh)
 
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
-		write_to_processlog(out_ssh,err_ssh,LOGFILE)
+		write_to_processlog(out_ssh,err_ssh)
 		if (ret_code != 0):
 			msg =  hostname+" at port "+port+" (Node : "+vid+") is not responding\nInstrumentization will terminate. Please make sure your experiment is running"+"\n"+err_ssh
 			return FALSE,msg
 
-		if (not isOSSupported(Node, LOGFILE, pKey,debug)):
+		if (not isOSSupported(Node,pKey)):
 			msg = "The Operating System on the Node \""+vid+"\" is not compatible with GEMINI"
 			return FALSE,msg
 		msg = "Node : \""+vid+"\" passed pre-check test"
-		write_to_log(LOGFILE,msg,printtoscreen,debug)
+		write_to_log(msg,printtoscreen)
 
 	
 	return TRUE,msg
@@ -515,7 +523,7 @@ def CM_Choices(my_managers,choice):
 
 # Install packages and other softare for INSTOOLS
 
-def InstallGN_Passive(GN_Node,LOGFILE,pKey,debug):
+def InstallGN_Passive(GN_Node,pKey):
 
 	my_cmurn = GN_Node['cmurn']
 	sliver_urn = GN_Node['sliver_id']
@@ -526,21 +534,21 @@ def InstallGN_Passive(GN_Node,LOGFILE,pKey,debug):
 
 	cmd ="cd /tmp/;sudo rm -rf /tmp/GDESKTOP_SETUP.* /tmp/gdesktop-*;wget "+INSTOOLS_repo_url+"tarballs/GDESKTOP_SETUP.tgz;tar xzf /tmp/GDESKTOP_SETUP.tgz;nohup sudo /tmp/GDESKTOP_SETUP.sh GN install &"
 
-	msg = "Starting the Global Node Software Intallation..."
-	write_to_log(LOGFILE,msg,printtoscreen,debug)
+#	msg = "Starting the Global Node Software Intallation..."
+#	write_to_log(msg,printtoscreen)
 	post_cmd = "sudo touch /var/emulab/boot/isGemini;"
 	
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh_GN',cmd,None,None)
-	write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	write_to_processlog(out_ssh,err_ssh)
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',post_cmd,None,None)
-	write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	write_to_processlog(out_ssh,err_ssh)
 	return
 
 
 #
 # start data collection routines 
 #
-def startStatscollection(GN_Node,LOGFILE,pKey,debug):
+def startStatscollection(GN_Node,pKey):
 
 	my_cmurn = GN_Node['cmurn']
 	sliver_urn = GN_Node['sliver_id']
@@ -550,13 +558,13 @@ def startStatscollection(GN_Node,LOGFILE,pKey,debug):
 	vid = GN_Node['nodeid']
 	
 	cmd = 'sudo '+measure_scripts_path+'/initiate_stat_collection_without_credentials.sh' 
-	msg = "Starting the Data collection routines on the Measurement controller"
-	write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
+	msg = "Starting the Data collection routines on the Global Node "+vid
+	write_to_log(msg,dontprinttoscreen)
 	
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
-	write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	write_to_processlog(out_ssh,err_ssh)
 	if(ret_code != 0):
-		msg = "Proble initiating Stat collections on the GN Node "+hostname
+		msg = "Problem initiating Stat collections on the GN Node "+vid
 		return FALSE,msg
 
 
@@ -565,7 +573,7 @@ def startStatscollection(GN_Node,LOGFILE,pKey,debug):
 #
 # PLace exp data on GN 
 #
-def dump_Expinfo_on_GN(GN_Node,userurn,email,instools_password,sliceurn,cmurn,dpadmin_username,dpadmin_passwd,slice_crypt,debug,LOGFILE,pKey):
+def dump_Expinfo_on_GN(GN_Node,userurn,email,instools_password,sliceurn,cmurn,dpadmin_username,dpadmin_passwd,slice_crypt,pKey):
 
 	my_cmurn = GN_Node['cmurn']
 	sliver_urn = GN_Node['sliver_id']
@@ -576,21 +584,21 @@ def dump_Expinfo_on_GN(GN_Node,userurn,email,instools_password,sliceurn,cmurn,dp
 
 	pre_cmd ="sudo rm -rf "+measure_scripts_path+"/save_info.sh "+EXP_NODE_tmppath+"/save_info*;sudo wget -P "+EXP_NODE_tmppath+" "+INSTOOLS_repo_url+"tarballs/save_info.tgz;sudo tar xzf "+EXP_NODE_tmppath+"/save_info.tgz -C "+measure_scripts_path+";"
 	cmd = 'sudo '+measure_scripts_path+'/save_info.sh '+userurn+' '+cmurn+' '+sliceurn+' '+dpadmin_username+' '+dpadmin_passwd+' '+slice_crypt+' '+email+' '+instools_password+' '+hostname
-	msg = "Saving Exp info on the Global Node"
-	write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
+	msg = "Saving Exp info on the Global Node "+vid
+	write_to_log(msg,dontprinttoscreen)
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',pre_cmd,None,None)
-	write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	write_to_processlog(out_ssh,err_ssh)
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
-	write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	write_to_processlog(out_ssh,err_ssh)
 	if (ret_code == 0):
 	   return TRUE,""
    	else:
-	   return FALSE,"Error send Exp Data to GN"
+	   return FALSE,"Error send Exp Data to GN "+vid
 
 #
 # Initialize Drupal menus for this topology
 #
-def initialize_Drupal_menu(GN_Node,LOGFILE ,pKey,debug):
+def initialize_Drupal_menu(GN_Node,pKey):
 
 
 	my_cmurn = GN_Node['cmurn']
@@ -601,17 +609,17 @@ def initialize_Drupal_menu(GN_Node,LOGFILE ,pKey,debug):
 	vid = GN_Node['nodeid']
 
 	cmd = 'sudo '+measure_scripts_path+'/initialize_drupal.sh menu'
-	msg = "Initializing Drupal Menu creation for this Topology"
-	write_to_log(LOGFILE,msg,printtoscreen,debug)
+	msg = "Initializing Drupal Menu creation for Global Node "+vid
+	write_to_log(msg,printtoscreen)
 	
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
-	write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	write_to_processlog(out_ssh,err_ssh)
 	return
 
 #
 # Create md5 crypt from user input passwd
 #
-def generate_crypt_passwd(passwd,LOGFILE,debug):
+def generate_crypt_passwd(passwd):
 
 	seq = ('./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz')
 	salt = ""
@@ -621,7 +629,7 @@ def generate_crypt_passwd(passwd,LOGFILE,debug):
 	mycrypt =  crypt.crypt(passwd,salt)
 	return mycrypt
 
-def getLockStatus(Node,LOGFILE,pKey,debug):
+def getLockStatus(Node,pKey):
 
 	global ssh
 	global EXP_NODE_tmppath
@@ -643,29 +651,29 @@ def getLockStatus(Node,LOGFILE,pKey,debug):
 #
 # Lock/unlock MC during setup
 #
-def lock_unlock_MC(GN_Node,what_to_do,LOGFILE,pKey,debug):
+def lock_unlock_MC(GN_Node,what_to_do,pKey):
 
 	global EXP_NODE_tmppath
 	global INSTOOLS_LOCK
 	msg = ""
 	while(1):
-		(lockstatus,ret_code,error_msg) = getLockStatus(GN_Node,LOGFILE,pKey,debug)
+		(lockstatus,ret_code,error_msg) = getLockStatus(GN_Node,pKey)
 		if(ret_code == -1 ):
 			return FALSE,error_msg
 		if(lockstatus != "" and  what_to_do == "init_lock"):
-			msg = "GeniDesktop has a status of "+lockstatus+"..\nCannot start another instance"
+			msg = "GeniDesktop at "+GN_Node['nodeid']+" has a status of "+lockstatus+"..\nCannot start another instance"
 			return FALSE,msg
 		elif(lockstatus == "INITIALIZATION_IN_PROGRESS" and what_to_do == "init_lock"):
-			msg = "GeniDesktop Initialization in progress..\nCannot start another instance"
+			msg = "GeniDesktop Initialization at "+GN_Node['nodeid']+" in progress..\nCannot start another instance"
 			return FALSE,msg
 		elif(lockstatus == "INITIALIZATION_COMPLETE"):
 			if(what_to_do == "init_lock" ):
-				msg = "GeniDesktop Initialization was previously completed..\nCannot start another instance"
+				msg = "GeniDesktop Initialization at "+GN_Node['nodeid']+" was previously completed..\nCannot start another instance"
 				return FALSE,msg
 			elif(what_to_do == "install_lock"):
-				msg = "Global Node Software Installation starting..."
-				write_to_log(LOGFILE,msg,printtoscreen,debug)
-				InstallGN_Passive(GN_Node,LOGFILE,pKey,debug)
+				msg = "Global Node Software Installation starting for "+GN_Node['nodeid']+"..."
+				write_to_log(msg,printtoscreen)
+				InstallGN_Passive(GN_Node,pKey)
 				time.sleep(15)
 				continue
 			elif(what_to_do == "instrument_lock"):
@@ -676,35 +684,35 @@ def lock_unlock_MC(GN_Node,what_to_do,LOGFILE,pKey,debug):
 				msg = "Invalid operation Error..\n"
 				return FALSE,msg
 			elif(what_to_do == "instrument_lock"):
-				(result,msg) = set_unset_LOCK(GN_Node,'INSTRUMENTIZE_IN_PROGRESS',LOGFILE,pKey,debug)
+				(result,msg) = set_unset_LOCK(GN_Node,'INSTRUMENTIZE_IN_PROGRESS',pKey)
 				if(result):
-					msg = "Gemini Configuration setup is starting.."
+					msg = "Gemini Configuration setup is starting for "+GN_Node['nodeid']+"..."
 					return TRUE,msg
 				else:
 					return FALSE,msg
 			elif(what_to_do == "install_lock"):
 				return TRUE,msg
 		elif(lockstatus == "INSTALLATION_IN_PROGRESS" and what_to_do == 'install_lock'):
-			msg = "Global Node software Installation is in progress\nWill check again in 15 seconds...."
-			write_to_log(LOGFILE,msg,printtoscreen,debug)
+			msg = "Global Node "+GN_Node['nodeid']+" software Installation is in progress\nWill check again in 15 seconds...."
+			write_to_log(msg,printtoscreen)
 			time.sleep(15)
 			continue
 		elif(lockstatus == "INSTRUMENTIZE_IN_PROGRESS" and what_to_do == "instrument_unlock"):
 			#set unlock Flag here
-			(result,msg) = set_unset_LOCK(GN_Node,'INSTRUMENTIZE_COMPLETE',LOGFILE,pKey,debug)
+			(result,msg) = set_unset_LOCK(GN_Node,'INSTRUMENTIZE_COMPLETE',pKey)
 			if(result):
-				msg = "Gemini Configuration setup is complete.."
+				msg = "Gemini Configuration setup for "+GN_Node['nodeid']+" is complete.."
 				return TRUE,msg
 			else:
 				return FALSE,msg
 		elif(lockstatus == "INSTRUMENTIZE_COMPLETE"):
-			msg = "Gemini Configuration setup is already complete..\nWill not proceed for this AM"
+			msg = "Gemini Configuration setup for "+GN_Node['nodeid']+" is already complete..\nWill not proceed for this AM"
 			return FALSE,msg
 		elif(lockstatus == "" and what_to_do == "init_lock" ):
-			msg = "GeniDesktop Initialization is safe to start"
+			msg = "GeniDesktop Initialization for "+GN_Node['nodeid']+" is safe to start"
 			return TRUE,msg
 		elif(lockstatus.find('IN_PROGRESS') != -1 and  what_to_do.find("lock") != -1):
-			msg = "GeniDesktop has some process in progress..\nCannot start another instance"
+			msg = "GeniDesktop has some process in progress at "+GN_Node['nodeid']+"..\nCannot start another instance"
 			return FALSE,msg
 		else:
 			msg = 'Your slice has not been initialized.\nCannot proceed without initialization first'
@@ -713,7 +721,7 @@ def lock_unlock_MC(GN_Node,what_to_do,LOGFILE,pKey,debug):
 	return TRUE,msg
 
 
-def set_unset_LOCK(Node,flag,LOGFILE,pKey,debug):
+def set_unset_LOCK(Node,flag,pKey):
 	my_cmurn = Node['cmurn']
 	sliver_urn = Node['sliver_id']
 	hostname = Node['login_hostname']
@@ -726,7 +734,7 @@ def set_unset_LOCK(Node,flag,LOGFILE,pKey,debug):
 	f.flush()
 
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'scp',None,adata,'/tmp/'+os.path.basename(adata))
-	write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	write_to_processlog(out_ssh,err_ssh)
 	if(ret_code != 0):
 		f.close()
 		msg = "Unable to set flag "+flag+" on "+hostname+" "+err_ssh
@@ -736,7 +744,7 @@ def set_unset_LOCK(Node,flag,LOGFILE,pKey,debug):
 	sendcmd = 'sudo mv '+'/tmp/'+os.path.basename(adata)+' '+INSTOOLS_LOCK+';'
 	
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',sendcmd,None,None)
-	write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	write_to_processlog(out_ssh,err_ssh)
 	if(ret_code != 0):
 		f.close()
 		msg = "Unable to set flag "+flag+" on "+hostname+" "+err_ssh
@@ -747,7 +755,7 @@ def set_unset_LOCK(Node,flag,LOGFILE,pKey,debug):
 #
 # Initialize/Start/Stop Netflow data collection 
 #
-def do_netflow_stuff(GN_Node,action, LOGFILE,pKey ,debug):
+def do_netflow_stuff(GN_Node,action,pKey):
 
 	my_cmurn = GN_Node['cmurn']
 	sliver_urn = GN_Node['sliver_id']
@@ -759,18 +767,18 @@ def do_netflow_stuff(GN_Node,action, LOGFILE,pKey ,debug):
 	
 	cmd = '/usr/bin/perl /usr/testbed/bin/netflow-scripts/geni_netflow.pl'
 	
-	msg = action+" Netflow Setup for this Topology"
-	write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
+	msg = action+" Netflow Setup for Global Node "+vid
+	write_to_log(msg,dontprinttoscreen)
 
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd+" "+action,None,None)
-	write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	write_to_processlog(out_ssh,err_ssh)
 	
 	return
 
 #
 # Call php script on MC to create the drupal account
 #
-def	drupal_account_create(GN_Node,LOGFILE,pKey,debug):
+def	drupal_account_create(GN_Node,pKey):
 		
 	global INSTOOLS_repo_url
 
@@ -786,14 +794,14 @@ def	drupal_account_create(GN_Node,LOGFILE,pKey,debug):
 	post_cmd = 'sudo rm -rf /var/www/html/drupal/createUser.php;'
 
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',pre_cmd+cmd+post_cmd,None,None)
-	write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	write_to_processlog(out_ssh,err_ssh)
 	return
 
 
 #
 # Update the drupal Admin info
 #
-def	update_Drupaladmin_acctinfo(GN_Node,LOGFILE,pKey,debug):
+def	update_Drupaladmin_acctinfo(GN_Node,pKey):
 		
 
 	my_cmurn = GN_Node['cmurn']
@@ -805,11 +813,11 @@ def	update_Drupaladmin_acctinfo(GN_Node,LOGFILE,pKey,debug):
 	
 	cmd = 'sudo '+measure_scripts_path+'/change_drupal_accinfo.sh;'
 
-	msg = "Updating the drupal Admin account info"
-	write_to_log(LOGFILE,msg,printtoscreen,debug)
+	msg = "Updating the drupal Admin account info on "+vid
+	write_to_log(msg,printtoscreen)
 	
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
-	write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	write_to_processlog(out_ssh,err_ssh)
 	if(ret_code !=0 ):
 		return FALSE,err_ssh
 	else:
@@ -820,7 +828,7 @@ def	update_Drupaladmin_acctinfo(GN_Node,LOGFILE,pKey,debug):
 #
 # Create VNC password on MC and  copy the same to Experimental machines
 #
-def	vnc_passwd_create(MP_Nodes,GN_Node,LOGFILE,pKey,debug):
+def	vnc_passwd_create(MP_Nodes,GN_Node,pKey):
 	
 	node_list = ""
 	for Node in MP_Nodes:
@@ -837,37 +845,37 @@ def	vnc_passwd_create(MP_Nodes,GN_Node,LOGFILE,pKey,debug):
 
 	mc_cmd = 'sudo '+measure_scripts_path+'/configure_vnc.sh "'+node_list+'";'
 
-	msg = "Setting up VNC Passwd file from MC and Experimental machines"
-	write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
+	msg = "Setting up VNC Passwd file on Global Node "+vid
+	write_to_log(msg,dontprinttoscreen)
 	
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',mc_cmd,None,None)
-	write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	write_to_processlog(out_ssh,err_ssh)
 	return
 
 #
 # Grab STDOUT and STDERR  and write it to MC Log
 #
-def write_to_processlog(out,err, LOGFILE):
+def write_to_processlog(out,err):
+	global LOGFILE_HANDLE
 
-	fh = open(LOGFILE, 'a')
 	log_date = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(time.time()))
 	if out != "":
-		fh.write(log_date+" :\n******** STDOUT ************* \n"+out+"*****************************\n")
+		LOGFILE_HANDLE.write(log_date+" :\n******** STDOUT ************* \n"+out+"*****************************\n")
 	if err != "":
-		fh.write(log_date+" :\n******** STDERR ************* \n"+err+"*****************************\n")
-	
-	fh.close()
-
+		LOGFILE_HANDLE.write(log_date+" :\n******** STDERR ************* \n"+err+"*****************************\n")
 	return
-		
-def write_to_log(LOGFILE, message,print_also,debug):
 
-	if ((print_also == 1) or debug):
+
+def write_to_log(message,print_also):
+
+	global LOGFILE_HANDLE
+	global debug
+
+	if (print_also or debug):
 		print message+"\n"
-	fh = open(LOGFILE, 'a')
 	log_date = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(time.time()))
-	fh.write(log_date +" :\t"+ message+"\n")
-	fh.close()
+	LOGFILE_HANDLE.write(log_date +" :\t"+ message+"\n")
+
 	return
 
 # Check if directory exists and create it if it does not
@@ -875,6 +883,20 @@ def ensure_dir(f):
 	d = os.path.dirname(f)
 	if not os.path.exists(d):
 		os.makedirs(d)
+
+def openLogPIPE(LOGFILE):
+
+	global LOGFILE_HANDLE
+	LOGFILE_HANDLE = open(LOGFILE, 'a')
+
+	return
+
+def closeLogPIPE(LOGFILE):
+
+	global LOGFILE_HANDLE
+	LOGFILE_HANDLE.close()
+
+	return
 
 # The characters to make up the random password
 chars = string.ascii_letters + string.digits
@@ -885,7 +907,7 @@ def random_password():
 
 
 # CALL LAMP python script to send MANIFEST
-def LAMP_sendmanifest(SLICEURN,manifest,LAMPCERT,SLICECRED_FOR_LAMP,LOGFILE,debug):
+def LAMP_sendmanifest(SLICEURN,manifest,LAMPCERT,SLICECRED_FOR_LAMP):
 
 	state = TRUE
 	cred_file = ""
@@ -914,12 +936,12 @@ def LAMP_sendmanifest(SLICEURN,manifest,LAMPCERT,SLICECRED_FOR_LAMP,LOGFILE,debu
 	process = subprocess.Popen(os.path.dirname(__file__)+"/lamp-sendmanifest.py "+manifest_file+" "+SLICEURN+" "+lpcert_file+" "+cred_file, shell=True,stdout=subprocess.PIPE,stdin=subprocess.PIPE,stderr=subprocess.PIPE)
 	(out,err) = process.communicate()
 	process.wait()
-	write_to_log(LOGFILE,out+"\n"+err,dontprinttoscreen,debug)
+	write_to_processlog(out,err)
 	try:
 		check = out.index("data element(s) successfully replaced")
 		state = TRUE
-		write_to_log(LOGFILE,out,dontprinttoscreen,debug)
 		msg = "Sent Manifest to the LAMP UNIS Successfully"
+		write_to_log(msg,printtoscreen)
 	except ValueError:
 		state = FALSE
 		msg = ""
@@ -931,7 +953,7 @@ def LAMP_sendmanifest(SLICEURN,manifest,LAMPCERT,SLICECRED_FOR_LAMP,LOGFILE,debu
 		cred.close
 	return state,msg
 
-def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,SLICEUUID,LAMPCERT,LOGFILE,pKey,debug):
+def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,SLICEUUID,LAMPCERT,pKey):
 
 	global EXP_NODE_tmppath
 	global INSTOOLS_repo_url
@@ -940,7 +962,7 @@ def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,SLICEUUID,LAMP
 
 	if (DISABLE_ACTIVE):
 		msg = "Will not enable Active Services due to UNIS Failure"
-		write_to_log(LOGFILE,msg,printtoscreen,debug)
+		write_to_log(msg,printtoscreen)
 		return state
 	# Place LAMP CERT on all nodes regardless in case we need it later
 	lpc = tempfile.NamedTemporaryFile()
@@ -955,7 +977,7 @@ def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,SLICEUUID,LAMP
 	#Install software on GN Node regardless
 	NODE_TYPE = "GN"
 	cmd = "cd "+EXP_NODE_tmppath+";sudo rm -rf ACTIVE_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/ACTIVE_SETUP.tgz;tar xzf ACTIVE_SETUP.tgz;sudo ./ACTIVE_SETUP.sh "+NODE_TYPE+" INSTALL "+SLICEURN+" "+USERURN+" "+GNHOST+" "+SLICEUUID
-	p = multiprocessing.Process(target=ActiveInstall,args=(GN_Node,cmd,cert_file,LOGFILE,debug,pKey,))
+	p = multiprocessing.Process(target=ActiveInstall,args=(GN_Node,cmd,cert_file,pKey,))
 	proclist.append(p)
 	p.start()                                                                                                                      
 	
@@ -967,7 +989,7 @@ def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,SLICEUUID,LAMP
 		NODE_TYPE = "MP"
 		cmd = "cd "+EXP_NODE_tmppath+";sudo rm -rf ACTIVE_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/ACTIVE_SETUP.tgz;tar xzf ACTIVE_SETUP.tgz;sudo ./ACTIVE_SETUP.sh "+NODE_TYPE+" INSTALL "+SLICEURN+" "+USERURN+" "+GNHOST+" "+SLICEUUID
 		#Install software on MP Nodes
-	        p = multiprocessing.Process(target=ActiveInstall,args=(Node,cmd,cert_file,LOGFILE,debug,pKey,))
+	        p = multiprocessing.Process(target=ActiveInstall,args=(Node,cmd,cert_file,pKey,))
 		proclist.append(p)
 		p.start()                                                                                                                      
         
@@ -978,7 +1000,7 @@ def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,SLICEUUID,LAMP
 	return state
 
 
-def ActiveInstall(Node,node_cmd,cert_file,LOGFILE,debug,pKey):
+def ActiveInstall(Node,node_cmd,cert_file,pKey):
 
 	cert_dest = "/var/emulab/boot/lampcert.pem"
 	global EXP_NODE_tmppath
@@ -993,26 +1015,26 @@ def ActiveInstall(Node,node_cmd,cert_file,LOGFILE,debug,pKey):
 	vid = Node['nodeid']
 
 	msg = "Placing the LAMP Cert on Node:\""+vid+"\" to allow it to complete setup"
-	write_to_log(LOGFILE,msg,printtoscreen,debug)
+	write_to_log(msg,printtoscreen)
 
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'scp',None,cert_file,'/tmp/'+os.path.basename(cert_file))
-	write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	write_to_processlog(out_ssh,err_ssh)
 
 	pre_cmd = "sudo mv "+EXP_NODE_tmppath+"/"+os.path.basename(cert_file)+" "+cert_dest+";"
 	
 	msg = "Running Active Services Install Scripts on Node: \""+vid+"\""
-	write_to_log(LOGFILE,msg,printtoscreen,debug)
+	write_to_log(msg,printtoscreen)
 	
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',pre_cmd+node_cmd,None,None)
-	write_to_processlog(out_ssh,err_ssh,LOGFILE)
+	write_to_processlog(out_ssh,err_ssh)
 
 	msg = "Active Services Scripts on Node: \""+vid+"\" completed."
-	write_to_log(LOGFILE,msg,printtoscreen,debug)
+	write_to_log(msg,printtoscreen)
 
 
 	return
 
-def makeInstrumentizeProxy(lifetime,auth_uuid,LOGFILE,debug):
+def makeInstrumentizeProxy(lifetime,auth_uuid):
 	global passphrase
 	global PROXY_CERT
 	global PROXY_KEY
@@ -1027,11 +1049,11 @@ def makeInstrumentizeProxy(lifetime,auth_uuid,LOGFILE,debug):
 	(result, msg) = genproxy.make_attribute_cert(CERTIFICATE,CERTIFICATE,PROXY_CERT,role,PROXY_ATTR,passphrase)
 	if not result:
 		PROXY_ATTR = None
-		write_to_log(LOGFILE,msg,printtoscreen,debug)
+		write_to_log(msg,printtoscreen)
 		
 	return result
 
-def generate_all_proxycerts(lifetime,auth_uuid,LOGFILE,debug):
+def generate_all_proxycerts(lifetime,auth_uuid):
 
 	global passphrase
 
@@ -1041,7 +1063,7 @@ def generate_all_proxycerts(lifetime,auth_uuid,LOGFILE,debug):
         irods_proxycert_file = f1.name
         irods_proxykey_file = f2.name
 
-	write_to_log(LOGFILE,"Generating proxy certificate for Irods service",printtoscreen,debug)
+	write_to_log("Generating proxy certificate for Irods service",printtoscreen)
 	genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,irods_proxycert_file,irods_proxykey_file,"irods",lifetime,passphrase)
 	f2.seek(0)
 	f1.seek(0,2)
@@ -1059,12 +1081,12 @@ def generate_all_proxycerts(lifetime,auth_uuid,LOGFILE,debug):
         gn_ms_proxyder_file = f5.name
 
 	role = "slice_admin_for_%s" % auth_uuid.replace("-", "")
-	write_to_log(LOGFILE,"Generating proxy certificates for GN_MS",printtoscreen,debug)
+	write_to_log("Generating proxy certificates for GN_MS",printtoscreen)
 	genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,gn_ms_proxycert_file,gn_ms_proxykey_file, "GN-MS",lifetime,passphrase)
 	genproxy.make_attribute_cert(CERTIFICATE,CERTIFICATE,gn_ms_proxycert_file,role,gn_ms_proxyder_file,passphrase)
 	# send attribute certs to UNIS
 	f = open(gn_ms_proxyder_file)
-	postDataToUNIS(gn_ms_proxykey_file,gn_ms_proxycert_file,"/credentials/geniuser",f,LOGFILE,debug)
+	postDataToUNIS(gn_ms_proxykey_file,gn_ms_proxycert_file,"/credentials/geniuser",f)
 	f.close()
 	os.remove(gn_ms_proxyder_file)
 
@@ -1078,26 +1100,26 @@ def generate_all_proxycerts(lifetime,auth_uuid,LOGFILE,debug):
         mp_blipp_proxyder_file = f8.name
 
 	role = "slice_admin_for_%s" % auth_uuid.replace("-","")
-	write_to_log(LOGFILE,"Generating proxy certificates for MP Blipp",printtoscreen,debug)
+	write_to_log("Generating proxy certificates for MP Blipp",printtoscreen)
 	genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,mp_blipp_proxycert_file,mp_blipp_proxykey_file, "blipp",lifetime,passphrase)
 	genproxy.make_attribute_cert(CERTIFICATE,CERTIFICATE,mp_blipp_proxycert_file,role,mp_blipp_proxyder_file,passphrase)
 	# send attribute certs to UNIS
 	f = open(mp_blipp_proxyder_file)
-	postDataToUNIS(mp_blipp_proxykey_file,mp_blipp_proxycert_file,"/credentials/geniuser",f,LOGFILE,debug)
+	postDataToUNIS(mp_blipp_proxykey_file,mp_blipp_proxycert_file,"/credentials/geniuser",f)
 	f.close()
 	os.remove(mp_blipp_proxyder_file)
 
 	return (gn_ms_proxycert_file,gn_ms_proxykey_file,mp_blipp_proxycert_file,mp_blipp_proxykey_file,irods_proxycert_file)
 
-def delete_all_temp_proxyfiles(files,LOGFILE,debug):
+def delete_all_temp_proxyfiles(files):
 
 	for file_name in files:
 		msg = "Deleteing "+file_name
-		write_to_log(LOGFILE,msg,dontprinttoscreen,debug)
+		write_to_log(msg,dontprinttoscreen)
 		os.remove(file_name)
 	return True
 
-def install_irods_Certs(GN_Nodes,pKey,proxycert_file,LOGFILE,debug):
+def install_irods_Certs(GN_Nodes,pKey,proxycert_file):
 
 	for node in GN_Nodes:
 		hostname = node['login_hostname']
@@ -1105,18 +1127,18 @@ def install_irods_Certs(GN_Nodes,pKey,proxycert_file,LOGFILE,debug):
 		username = node['login_username']
 		vid = node['nodeid']
 
-		write_to_log(LOGFILE,"Installing Irods proxy certificate on "+vid,printtoscreen,debug)
+		write_to_log("Installing Irods proxy certificate on "+vid,printtoscreen)
 
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'scp',None,proxycert_file,'/tmp/'+os.path.basename(proxycert_file))
-		write_to_processlog(out_ssh,err_ssh,LOGFILE)
+		write_to_processlog(out_ssh,err_ssh)
 	
 		cmd = 'sudo install -D /tmp/'+os.path.basename(proxycert_file)+' '+GN_IRODS_CERT+' -o root -g root -m 600;'
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
-		write_to_processlog(out_ssh,err_ssh,LOGFILE)
+		write_to_processlog(out_ssh,err_ssh)
 	pass
 
 
-def install_GN_Certs(GN_Nodes,pKey,gn_ms_proxycert_file,gn_ms_proxykey_file,LOGFILE,debug):
+def install_GN_Certs(GN_Nodes,pKey,gn_ms_proxycert_file,gn_ms_proxykey_file):
 
 	for node in GN_Nodes:
 		hostname = node['login_hostname']
@@ -1124,23 +1146,23 @@ def install_GN_Certs(GN_Nodes,pKey,gn_ms_proxycert_file,gn_ms_proxykey_file,LOGF
 		username = node['login_username']
 		vid = node['nodeid']
 		
-		write_to_log(LOGFILE,"Installing GN_MS proxy certificate on "+vid,printtoscreen,debug)
+		write_to_log("Installing GN_MS proxy certificate on "+vid,printtoscreen)
 
 		# scp these via sshConnection...
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'scp',None,gn_ms_proxycert_file,'/tmp/'+os.path.basename(gn_ms_proxycert_file))
-		write_to_processlog(out_ssh,err_ssh,LOGFILE)
+		write_to_processlog(out_ssh,err_ssh)
 
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'scp',None,gn_ms_proxykey_file,'/tmp/'+os.path.basename(gn_ms_proxykey_file))
-		write_to_processlog(out_ssh,err_ssh,LOGFILE)
+		write_to_processlog(out_ssh,err_ssh)
 
 		cmd = 'sudo install -D /tmp/'+os.path.basename(gn_ms_proxycert_file)+' '+GN_PROXY_CERT+' -o root -g root -m 600;sudo install -D /tmp/'+os.path.basename(gn_ms_proxykey_file)+' '+GN_PROXY_KEY+' -o root -g root -m 600;sudo cat '+GN_PROXY_CERT+'>/tmp/unis-proxy.pem;sudo echo "">>/tmp/unis-proxy.pem;sudo cat '+GN_PROXY_KEY+'>>/tmp/unis-proxy.pem;sudo install -D /tmp/unis-proxy.pem '+GN_UNIS_CERT+' -o nobody -g nobody -m 750;sudo chmod 755 '+BASE_CERT_DIR+';'
 
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
-		write_to_processlog(out_ssh,err_ssh,LOGFILE)
+		write_to_processlog(out_ssh,err_ssh)
 
 	pass
 
-def install_MP_Certs(MP_Nodes,pKey,mp_blipp_proxycert_file,mp_blipp_proxykey_file,LOGFILE,debug):
+def install_MP_Certs(MP_Nodes,pKey,mp_blipp_proxycert_file,mp_blipp_proxykey_file):
 
         for node in MP_Nodes:
 		hostname = node['login_hostname']
@@ -1148,22 +1170,22 @@ def install_MP_Certs(MP_Nodes,pKey,mp_blipp_proxycert_file,mp_blipp_proxykey_fil
 		username = node['login_username']
 		vid = node['nodeid']
 
-		write_to_log(LOGFILE,"Installing MP_Blipp proxy certificate on "+vid,printtoscreen,debug)
+		write_to_log("Installing MP_Blipp proxy certificate on "+vid,printtoscreen)
 	
 		# scp these via sshConnection...
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'scp',None,mp_blipp_proxycert_file,'/tmp/'+os.path.basename(mp_blipp_proxycert_file))
-		write_to_processlog(out_ssh,err_ssh,LOGFILE)
+		write_to_processlog(out_ssh,err_ssh)
 
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'scp',None,mp_blipp_proxykey_file,'/tmp/'+os.path.basename(mp_blipp_proxykey_file))
-		write_to_processlog(out_ssh,err_ssh,LOGFILE)
+		write_to_processlog(out_ssh,err_ssh)
 
 		cmd = 'sudo install -D /tmp/'+os.path.basename(mp_blipp_proxycert_file)+' '+MP_PROXY_CERT+' -o root -g root -m 600;sudo install -D /tmp/'+os.path.basename(mp_blipp_proxykey_file)+' '+MP_PROXY_KEY+' -o root -g root -m 600;'
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
-		write_to_processlog(out_ssh,err_ssh,LOGFILE)
+		write_to_processlog(out_ssh,err_ssh)
 
 	pass
 
-def createBlippServiceEntries(MP_Nodes,GN_Node,slice_uuid,LOGFILE,debug):
+def createBlippServiceEntries(MP_Nodes,GN_Node,slice_uuid):
 	service_desc = dict()
 	service_desc.update({"$schema": UNIS_SCHEMAS["service"]})
 	service_desc.update({"serviceType": "ps:tools:blipp"})
@@ -1189,9 +1211,9 @@ def createBlippServiceEntries(MP_Nodes,GN_Node,slice_uuid,LOGFILE,debug):
 		post_desc.update({"runningOn": {"href": UNIS_URL+"/nodes/"+node["machine_hostname"],
 						"rel": "full"}})
 		post_str = json.dumps(post_desc)
-		postDataToUNIS(PROXY_KEY,PROXY_CERT,"/services",post_str,LOGFILE,debug)
+		postDataToUNIS(PROXY_KEY,PROXY_CERT,"/services",post_str)
 
-def getUnencryptedKeyfile(cert_pKey,LOGFILE,debug):
+def getUnencryptedKeyfile(cert_pKey):
 
 	TKF = tempfile.NamedTemporaryFile(delete=False)
 	cert_pKey.write_private_key_file(TKF.name)
@@ -1202,7 +1224,7 @@ def getUnencryptedKeyfile(cert_pKey,LOGFILE,debug):
 	return TKF.name
 
 #POST some data to specified UNIS endpoints
-def postDataToUNIS(key,cert,endpoint,data,LOGFILE,debug):
+def postDataToUNIS(key,cert,endpoint,data):
 	url = UNIS_URL+endpoint
 	o = urlparse.urlparse(url)
 
@@ -1211,21 +1233,21 @@ def postDataToUNIS(key,cert,endpoint,data,LOGFILE,debug):
 		conn.request("POST", o.path, data)
 	except Exception as e:
 		msg = "Could not connect to UNIS: %s" % e
-		write_to_log(LOGFILE,msg,printtoscreen,debug)
+		write_to_log(msg,printtoscreen)
 		return None
 
 	r = conn.getresponse()
 	data = r.read()
 	if r.status not in (200, 201):
-		write_to_log(LOGFILE,"Could not POST to UNIS at "+url,printtoscreen,debug)
-		write_to_log(LOGFILE,"  Error: "+data,printtoscreen,debug)
+		write_to_log("Could not POST to UNIS at "+url,printtoscreen)
+		write_to_log("  Error: "+data,printtoscreen)
 		return None
 	else:
 		return data
 
 
 #Obtain Slice Credential from GeniDesktop Parser
-def getLampCert_n_details_FromParser(slice_crypt,user_crypt,LOGFILE,debug):
+def getLampCert_n_details_FromParser(slice_crypt,user_crypt):
 
 	post_data = urllib.urlencode({'slice_crypt':slice_crypt, 'user_crypt':user_crypt})
 	url = 'https://parser.netlab.uky.edu/getLNUinfo.php'
@@ -1236,7 +1258,7 @@ def getLampCert_n_details_FromParser(slice_crypt,user_crypt,LOGFILE,debug):
 	return post_return
 
 #Obtain userinfo using Credentials from GeniDesktop Parser
-def getUserinfoFromParser(cert,passphrase,LOGFILE,debug):
+def getUserinfoFromParser(cert,passphrase):
 
 	post_data = urllib.urlencode({'cert':cert, 'passphrase':passphrase})
 	url = 'https://parser.netlab.uky.edu/getUserinfo.php'
@@ -1247,7 +1269,7 @@ def getUserinfoFromParser(cert,passphrase,LOGFILE,debug):
 	return post_return
 
 #Obtain Sliceinfo using cryptic form of user credentials from GeniDesktop Parser
-def getSliceinfoFromParser(user_crypt,LOGFILE,debug):
+def getSliceinfoFromParser(user_crypt):
 
 	post_data = urllib.urlencode({'user_crypt':user_crypt})
 	url = 'https://parser.netlab.uky.edu/getSliceinfo.php'
@@ -1257,7 +1279,7 @@ def getSliceinfoFromParser(user_crypt,LOGFILE,debug):
 	return post_return
 
 #Clear Cert and Passphrase at  GeniDesktop Parser
-def clearUserinfoatParser(user_crypt,LOGFILE,debug):
+def clearUserinfoatParser(user_crypt):
 
 	post_data = urllib.urlencode({'user_crypt':user_crypt})
 	url = 'https://parser.netlab.uky.edu/clearUserinfo.php'
@@ -1266,7 +1288,7 @@ def clearUserinfoatParser(user_crypt,LOGFILE,debug):
 	post_return = post_response.read()
 	return post_return
 
-def getJSONManifestFromParser(slice_crypt,slicename,api,force_refresh,LOGFILE,debug):
+def getJSONManifestFromParser(slice_crypt,slicename,api,force_refresh):
 	
 	post_data = urllib.urlencode({'key':slice_crypt,'slice_name':slicename,'api':api,'force_refresh':force_refresh})
 	url = 'https://parser.netlab.uky.edu/parseManifest.php'
@@ -1284,10 +1306,9 @@ def getPkey(keyfile,filetype,keypassphrase = None):
 			pKey_object = paramiko.RSAKey.from_private_key_file(keyfile,keypassphrase)
 			break
 		except paramiko.PasswordRequiredException:
-			print "\nPrivate "+filetype+" file "+keyfile+" is encrypted. Please provide the correct passphrase\n"
 			if(filetype == "certificate" and os.path.exists(PASSPHRASEFILE)):
 				try:
-					print "Reading passphase from "+PASSPHRASEFILE
+					print "\nPrivate "+filetype+" file "+keyfile+" is encrypted. Trying to read passphase from "+PASSPHRASEFILE+"\n"
 					keypassphrase = open(PASSPHRASEFILE).readline()
 					keypassphrase = keypassphrase.strip()
 				except IOError, e:
@@ -1300,6 +1321,7 @@ def getPkey(keyfile,filetype,keypassphrase = None):
 					PASSPHRASEFILE = None
 					keypassphrase = None
 			else:
+				print "\nPrivate "+filetype+" file "+keyfile+" is encrypted. Please provide the correct passphrase\n"
 				from M2Crypto.util import passphrase_callback
 				keypassphrase = str(passphrase_callback(1, prompt1='Enter passphrase:', prompt2='Verify passphrase:'))
 		except paramiko.SSHException:
