@@ -385,7 +385,6 @@ if (len(GN_Nodes) == 0):
 msg = "Fetching Lamp Certificate and other information from the GeniDesktop Parser"
 gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 LAMPJSON = gemini_util.getLampCert_n_details_FromParser(slice_crypt,user_crypt)
-
 try:
 	LAMPOBJ = json.loads(LAMPJSON)
 	gemini_util.write_to_log(LAMPJSON,gemini_util.dontprinttoscreen)
@@ -425,51 +424,47 @@ if(not FILE):
 	f.close
 	
 if(LAMPCERT == ''):
-	msg = "Lamp Certificate Not Found.\nActive Services will be disabled to continue with the Instrumentation process"
+	msg = "Lamp Certificate was Not Found. Some services may not work correctly"
 	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-	gemini_util.DISABLE_ACTIVE = gemini_util.TRUE
-else:
-	SLICECRED_FOR_LAMP = slicecred.replace('<?xml version="1.0" encoding="UTF-8" standalone="no"?>','',1).lstrip()
-	slice_lifetime = {}
-	if (slice_uuid):
-	        expiration = datetime.datetime.strptime(expiry,"%Y-%m-%dT%H:%M:%SZ")
-	        now = datetime.datetime.now(expiration.tzinfo)
-	        td = expiration - now
-	        slice_lifetime = int(td.seconds + td.days * 24 * 3600)
-		validity = datetime.timedelta(seconds=slice_lifetime)
-		slice_lifetime = validity.days + 1
-		#Now setup a proxy cert for the instrumentize script so we can talk to UNIS without keypass
-		gemini_util.makeInstrumentizeProxy(slice_lifetime,slice_uuid)
-		if not (gemini_util.PROXY_ATTR):
-			msg = "ERROR: Could not complete proxy certificate creation for instrumentize process"
-			gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-			msg = "Active Services will be disabled to continue with the Instrumentation process"
-			gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-			gemini_util.DISABLE_ACTIVE = gemini_util.TRUE
-		else:
-			pass
-			# temporary hack to write out an unencrypted keyfile for the slice registration call to UNIS
-			TEMP_KEYFILE = gemini_util.getUnencryptedKeyfile(CERT_pkey)
-			msg="Registering slice credential with Global UNIS"
-			gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-			res1 = gemini_util.postDataToUNIS(TEMP_KEYFILE,gemini_util.CERTIFICATE,"/credentials/genislice",slicecred)
-			os.remove(TEMP_KEYFILE)
-			f = open(gemini_util.PROXY_ATTR)
-			res2 = gemini_util.postDataToUNIS(gemini_util.PROXY_KEY,gemini_util.PROXY_CERT,"/credentials/geniuser",f)
-			f.close()
-			os.remove(gemini_util.PROXY_ATTR)
-			if res1 or res2 is None:
-				msg="Failed to register slice credential"
-				gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-				msg = "Active Services will be disabled to continue with the Instrumentation process"
-				gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-				gemini_util.DISABLE_ACTIVE = gemini_util.TRUE
-	else:
-	        msg = "Could not get slice UUID from slice credential"
-	        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+
+SLICECRED_FOR_LAMP = slicecred.replace('<?xml version="1.0" encoding="UTF-8" standalone="no"?>','',1).lstrip()
+slice_lifetime = {}
+if (slice_uuid):
+        expiration = datetime.datetime.strptime(expiry,"%Y-%m-%dT%H:%M:%SZ")
+        now = datetime.datetime.now(expiration.tzinfo)
+        td = expiration - now
+        slice_lifetime = int(td.seconds + td.days * 24 * 3600)
+	validity = datetime.timedelta(seconds=slice_lifetime)
+	slice_lifetime = validity.days + 1
+	#Now setup a proxy cert for the instrumentize script so we can talk to UNIS without keypass
+	gemini_util.makeInstrumentizeProxy(slice_lifetime,slice_uuid)
+	if not (gemini_util.PROXY_ATTR):
+		msg = "ERROR: Could not complete proxy certificate creation for instrumentize process"
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 		msg = "Active Services will be disabled to continue with the Instrumentation process"
 		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 		gemini_util.DISABLE_ACTIVE = gemini_util.TRUE
+
+	# temporary hack to write out an unencrypted keyfile for the slice registration call to UNIS
+	TEMP_KEYFILE = gemini_util.getUnencryptedKeyfile(CERT_pkey)
+	msg="Registering slice credential with Global UNIS"
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+	res1 = gemini_util.postDataToUNIS(TEMP_KEYFILE,gemini_util.CERTIFICATE,"/credentials/genislice",slicecred)
+	os.remove(TEMP_KEYFILE)
+	f = open(gemini_util.PROXY_ATTR)
+	res2 = gemini_util.postDataToUNIS(gemini_util.PROXY_KEY,gemini_util.PROXY_CERT,"/credentials/geniuser",f)
+	f.close()
+	os.remove(gemini_util.PROXY_ATTR)
+	if res1 or res2 is None:
+		msg="Failed to register slice credential"
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+		msg = "Active Services will be disabled to continue with the Instrumentation process"
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+		gemini_util.DISABLE_ACTIVE = gemini_util.TRUE
+else:
+        msg = "Could not get slice UUID from slice credential. GEMINI Services may fail."
+        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+	sys.exit(1)
 
 gn_ms_proxycert_file = None
 gn_ms_proxykey_file= None

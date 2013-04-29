@@ -375,12 +375,12 @@ def isOSSupported(Node,pKey):
 
 	pre_cmd = SUDO+"rm -rf "+measure_scripts_path+"/INSTALL_DEFS.sh "+EXP_NODE_tmppath+"/INSTALL_DEFS.tgz;"+SUDO+"mkdir -p "+measure_scripts_path+";"+SUDO+"wget -P "+EXP_NODE_tmppath+" "+INSTOOLS_repo_url+"tarballs/INSTALL_DEFS.tgz;"+SUDO+"tar xzf "+EXP_NODE_tmppath+"/INSTALL_DEFS.tgz -C "+measure_scripts_path+";"
 	additional_cmd = SUDO+"rm -rf /tmp/version_check.sh;wget -P /tmp "+INSTOOLS_repo_url+"scripts/version_check.sh;chmod +x "+EXP_NODE_tmppath+"/version_check.sh;"+SUDO+" "+EXP_NODE_tmppath+"/version_check.sh "
-	cmd = SUDO+'ls '
+	cmd = SUDO+'ls '+SUPPORTED_FLAG
 
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',pre_cmd+additional_cmd,None,None)
 	write_to_processlog(out_ssh,err_ssh)
 
-	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd+SUPPORTED_FLAG,None,None)
+	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
 	write_to_processlog(out_ssh,err_ssh)
    	if(ret_code == 0):
 	   return TRUE
