@@ -991,7 +991,7 @@ def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,SLICEUUID,LAMP
 		#Install software on MP Nodes
 	        p = multiprocessing.Process(target=ActiveInstall,args=(Node,cmd,cert_file,pKey,))
 		proclist.append(p)
-		p.start()                                                                                                                      
+		p.start()
         
 	for i in proclist:
 		i.join()
@@ -999,13 +999,31 @@ def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,SLICEUUID,LAMP
 	lpc.close
 	return state
 
+def installLAMPCert(Node,pKey,cert_file,add_cmd):
+
+	cert_dest = "/var/emulab/boot/lampcert.pem"	
+	lamp_dest = "/usr/local/etc/protogeni/ssl"
+
+	hostname = Node['login_hostname']
+	port = Node['login_port']
+	username = Node['login_username']
+	vid = Node['nodeid']
+
+	msg = "Placing the LAMP Cert on Node:\""+vid+"\""
+	write_to_log(msg,printtoscreen)
+
+	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'scp',None,cert_file,'/tmp/'+os.path.basename(cert_file))
+	write_to_processlog(out_ssh,err_ssh)
+
+	node_cmd = "sudo mv "+EXP_NODE_tmppath+"/"+os.path.basename(cert_file)+" "+cert_dest+";"
+
+	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',node_cmd+add_cmd,None,None)
+	write_to_processlog(out_ssh,err_ssh)
+	
+	return
 
 def ActiveInstall(Node,node_cmd,cert_file,pKey):
-
-	cert_dest = "/var/emulab/boot/lampcert.pem"
 	global EXP_NODE_tmppath
-	global ssh
-	global scp
 	
 	my_cmurn = Node['cmurn']
 	sliver_urn = Node['sliver_id']
@@ -1019,18 +1037,15 @@ def ActiveInstall(Node,node_cmd,cert_file,pKey):
 
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'scp',None,cert_file,'/tmp/'+os.path.basename(cert_file))
 	write_to_processlog(out_ssh,err_ssh)
+	installLAMPCert(Node,pKey,cert_file,"")
 
-	pre_cmd = "sudo mv "+EXP_NODE_tmppath+"/"+os.path.basename(cert_file)+" "+cert_dest+";"
-	
 	msg = "Running Active Services Install Scripts on Node: \""+vid+"\""
 	write_to_log(msg,printtoscreen)
-	
-	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',pre_cmd+node_cmd,None,None)
+	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',node_cmd,None,None)
 	write_to_processlog(out_ssh,err_ssh)
 
 	msg = "Active Services Scripts on Node: \""+vid+"\" completed."
 	write_to_log(msg,printtoscreen)
-
 
 	return
 
@@ -1239,8 +1254,8 @@ def postDataToUNIS(key,cert,endpoint,data):
 	r = conn.getresponse()
 	data = r.read()
 	if r.status not in (200, 201):
-		write_to_log("Could not POST to UNIS at "+url,printtoscreen)
-		write_to_log("  Error: "+data,printtoscreen)
+		write_to_log("POST to UNIS at "+url,printtoscreen)
+		write_to_log(data,printtoscreen)
 		return None
 	else:
 		return data
