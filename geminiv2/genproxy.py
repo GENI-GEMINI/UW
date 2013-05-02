@@ -50,8 +50,7 @@ def make_proxy_cert(icert, ikey, pcert, pkey, CN, lifetime, PASSPHRASE):
         f = open(CSRCONF_FILENAME, 'w')
         f.write(CSRCONF)
         f.close()
-
-    if not len(PASSPHRASE):
+    if ((PASSPHRASE is None) or not len(PASSPHRASE)):
         PASSPHRASE = "\n"
 
     cmd_subj = CMD_ISSUER_SUBJECT % icert    
@@ -121,7 +120,7 @@ def make_attribute_cert(icert, ikey, scert, role, outcert, PASSPHRASE):
 
     cmd_attr = CMD_CREATE_ATTR % (icert, ikey, role, creddy_subject_cert, outcert)
     process = subprocess.Popen(cmd_attr, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
-    (out, err) = process.communicate(input=PASSPHRASE+"\n")
+    (out, err) = process.communicate(input=str(PASSPHRASE)+"\n")
 
     try:
         check = out.index("Key passphrase:")

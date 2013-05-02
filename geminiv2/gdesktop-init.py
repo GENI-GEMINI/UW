@@ -27,6 +27,7 @@ import M2Crypto
 #import urllib
 import hashlib
 import json
+import multiprocessing
 import gemini_util	# Import user defined routines
 
 other_details = ""
@@ -43,6 +44,7 @@ def Usage():
         print "usage: " + sys.argv[ 0 ] + " [option...]"
         print """Options:
     -d, --debug                         be verbose about XML methods invoked
+    --devel	                        Use Devel version [only for developers]
     -x, --no_force_refresh                  Do not force parser to get fresh manifests from AMs
     -k, --pkey=file			Private SSH RSA Key file
     -f file, --certificate=file         read SSL certificate from file
@@ -55,11 +57,78 @@ def Usage():
     -p file, --passphrase=file          read passphrase from file
                                             [default: ~/.ssl/password]"""
 
+def InitProcess(my_manager,pruned_GN_Nodes,pruned_MP_Nodes):
+
+	global USERURN
+	global email_id
+	global user_password_for_drupal
+	global SLICEURN
+	global dpadmin_username
+	global dpadmin_passwd
+	global slice_crypt
+	global pKey
+	global user_public_key
+
+
+	# STEP 1: Check nodes for OS Compatibilty
+	msg = "Checking if Nodes at AM --> "+my_manager+" for \n"+"1. Check if Global Node Present\n2. Find Nodes to be monitored by GEMINI\n3. OS Compatibility of selected Nodes"
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+	(result,msg) = gemini_util.precheckNodes(pruned_GN_Nodes[0],pruned_MP_Nodes,pKey)
+	if(result):
+		msg = "All nodes at AM --> "+my_manager+" are GEMINI capable.\nWill proceed with the GENI Desktop Init Process"
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+
+	else:
+		msg = "ERROR @ {"+my_manager+"} :: "+msg
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+		sys.exit(1)
+
+	(status,msg) = gemini_util.lock_unlock_MC(pruned_GN_Nodes[0],"init_lock",pKey)
+	msg = "["+my_manager+"] "+msg
+	if(not status):
+		msg = msg + "\nConfiguring next AM if available"
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+		return
+	else:
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+
+
+	#Place on the GN Node - DRUPAL_ADMIN_PASSWORD , userurn , sliceurn , slicename, cmurn, cmhrn , vnc_passwd, topinfo, portal_public_key
+	(result,msg) = gemini_util.dump_Expinfo_on_GN(pruned_GN_Nodes[0],USERURN,email_id,user_password_for_drupal,SLICEURN,my_manager,dpadmin_username,dpadmin_passwd,slice_crypt,pKey)
+	if(result):
+		msg = "GN that monitors MP Nodes at  "+my_manager+" has all the Exp info it needs. Will now proceed with the Initialization process."
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+
+	else:
+		msg = "GN ERROR @ {"+my_manager+"} :: while placing Exp info "+str(msg)
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+		sys.exit(1)
+
+	# STEP 2 : Download Passive measurement scripts and start ssh-key generator on the GN
+	# STEP 2b : Save MC public key onto a file pn GN, fetch it from the GN and place it on all MP Nodes
+	# STEP 3 : Install Shell in a box on all nodes and generate the Shellinabox config
+	(result,msg) = gemini_util.install_keys_plus_shell_in_a_box(pruned_GN_Nodes[0],pruned_MP_Nodes,user_public_key,pKey)
+	if(result):
+		msg = "All nodes at AM --> "+my_manager+" have been Initialized."
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+
+	else:
+		msg = "ERROR @ {"+my_manager+"} :: during Initialization "+str(msg)
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+		sys.exit(1)
+
+	return
+ 
+
+#############################################
+# MAIN PROCESS
+#############################################
+
+
 try:
     opts, REQARGS = getopt.gnu_getopt( sys.argv[ 1: ], "dhxk:f:n:j:p:",
                                    [ "debug","help","no_force_refresh","pkey=","certificate=",
-                                     "slicename=","loadFromFile="
-                                     "passphrase="] )
+                                     "slicename=","loadFromFile=","devel","passphrase="] )
 except getopt.GetoptError, err:
     print >> sys.stderr, str( err )
     Usage()
@@ -69,16 +138,13 @@ args = REQARGS
 
 for opt, arg in opts:
     if opt in ( "-d", "--debug" ):
-        debug = 1
+        gemini_util.debug = 1
+    elif opt in ( "--devel" ):
+        gemini_util.version = gemini_util.devel_version
     elif opt in ( "-x","--no_force_refresh" ):
         force_refresh = '0'
     elif opt in ( "-f", "--certificatefile" ):
         gemini_util.CERTIFICATE = arg
-    elif opt in ( "-k", "--pkey" ):
-        keyfile = arg
-	if(not (keyfile != '' and os.path.isfile(keyfile))):
-		print "Please provide a valid private key file"
-		sys.exit(1)
     elif opt in ( "-h", "--help" ):
         Usage()
         sys.exit( 0 )
@@ -88,6 +154,13 @@ for opt, arg in opts:
 	if(gemini_util.SLICENAME == ''):
 		print "Please provide a slicename"
 		sys.exit(1)
+	else:
+		mylogbase = gemini_util.getLOGBASE()
+		LOCALTIME = time.strftime("%Y%m%dT%H:%M:%S",time.localtime(time.time()))
+		LOGFILE = mylogbase+"/gdesktop-init-"+gemini_util.SLICENAME+"_"+LOCALTIME+".log"
+		gemini_util.ensure_dir(LOGFILE)
+		gemini_util.openLogPIPE(LOGFILE)
+		pass
     elif opt in ( "-p", "--passphrasefile" ):
         gemini_util.PASSPHRASEFILE = arg
     elif opt in ( "-j", "--loadFromFile" ):
@@ -98,31 +171,30 @@ for opt, arg in opts:
 		sys.exit(1)
 	else:
 		f = open(FILE,'r')
-mylogbase = gemini_util.getLOGBASE()
-LOCALTIME = time.strftime("%Y%m%dT%H:%M:%S",time.localtime(time.time()))
-LOGFILE = mylogbase+"/gdesktop-init-"+gemini_util.SLICENAME+"_"+LOCALTIME+".log"
-gemini_util.ensure_dir(LOGFILE)
+    elif opt in ( "-k", "--pkey" ):
+        keyfile = arg
+	if(not (keyfile != '' and os.path.isfile(keyfile))):
+		print "Please provide a valid private key file"
+		sys.exit(1)
+	else:
+		SSH_pkey = gemini_util.getPkey(keyfile,"SSH key")
 
 try:
 	cf = open(gemini_util.CERTIFICATE,'r')
 except:
 	msg = "Error opening Certificate"
-        gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
 # Check if passphrase provided is valid
 # If passphrase is not provided prompt for it.
-try:
-	ctx = M2Crypto.SSL.Context("sslv23")
-	ctx.load_cert(gemini_util.CERTIFICATE,gemini_util.CERTIFICATE,gemini_util.PassPhraseCB)
-	(CERT_ISSUER,username) = gemini_util.getCert_issuer_n_username()
-except M2Crypto.SSL.SSLError:
-	msg = "Invalid passphrase provided"
-        gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-	sys.exit(1)
+CERT_pkey = gemini_util.getPkey(gemini_util.CERTIFICATE,"certificate")
+(CERT_ISSUER,username) = gemini_util.getCert_issuer_n_username()
 
 if(not (keyfile != '' and os.path.isfile(keyfile))):
-	keyfile = gemini_util.CERTIFICATE
+	pKey = CERT_pkey
+else:
+	pKey = SSH_pkey
 
 if(not FILE):
 	#loading cache file
@@ -131,7 +203,7 @@ if(not FILE):
 		FILE = ''
 	elif((time.time() - os.stat(FILE)[8] ) > gemini_util.cache_expiry): # Assumes that if cache file is older than 15 minutes dont use it.
 		msg = "Cache is empty or invalid :EXPIRED "+str(time.time() - os.stat(FILE)[8]  - gemini_util.cache_expiry )+' seconds ago'
-		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 		FILE = ''
 
 	else:
@@ -144,12 +216,12 @@ if(not FILE):
 
 if (FILE):
 	msg = "Fetching User Info from the Cache"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	UserJSON = f.readline()
 else:
 	msg = "Fetching User Info from the GeniDesktop Parser"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-	UserJSON = gemini_util.getUserinfoFromParser(cf.read(),gemini_util.passphrase,LOGFILE,debug)
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+	UserJSON = gemini_util.getUserinfoFromParser(cf.read(),gemini_util.passphrase)
 cf.close()
 try:
 	UserOBJ = json.loads(UserJSON)
@@ -159,10 +231,10 @@ except ValueError:
 		# So the next time its called again, fresh info from the parser is pulled
 		os.unlink(FILE)
 	msg ="User JSON Loading Error"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
-gemini_util.write_to_log(LOGFILE,UserJSON,gemini_util.dontprinttoscreen,debug)
+gemini_util.write_to_log(UserJSON,gemini_util.dontprinttoscreen)
 if (UserOBJ['code'] == 0):
 	UserInfo = UserOBJ['output']
 	username = UserInfo['uid']
@@ -173,23 +245,23 @@ if (UserOBJ['code'] == 0):
 	framework = UserInfo['framework']
 	if(framework == 'portal'):
 		msg = "Please make sure that the below shown SSH Public key is in the list of keys registered at your Slice Authority\n"+user_public_key+"\n"
-		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	#CERT_ISSUER = UserInfo['certificate_issuer']
 else:
 	msg = "User not identified : "+ UserOBJ['output']
-        gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
 msg = "Found User Info for "+USERURN
-gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 if (FILE):
 	msg = "Fetching Slice Info from the Cache"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	SliceJSON = f.readline()
 else:
 	msg = "Fetching Slice Info from the GeniDesktop Parser"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-	SliceJSON = gemini_util.getSliceinfoFromParser(user_crypt,LOGFILE,debug)
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+	SliceJSON = gemini_util.getSliceinfoFromParser(user_crypt)
 try:
 	SliceOBJ = json.loads(SliceJSON)
 except ValueError:
@@ -199,14 +271,14 @@ except ValueError:
 		os.unlink(FILE)
 	
 	msg ="Slice JSON Loading Error"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
-gemini_util.write_to_log(LOGFILE,SliceJSON,gemini_util.dontprinttoscreen,debug)
+gemini_util.write_to_log(SliceJSON,gemini_util.dontprinttoscreen)
 found = gemini_util.FALSE
 if (SliceOBJ['code'] != 0):
 	msg = "User/Slice not identified : "+ SliceOBJ['output']
-        gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
 Slices = SliceOBJ['output']
@@ -219,21 +291,21 @@ for  SliceInfo in Slices:
 
 if(not found):
 	msg = "Slice : "+gemini_util.SLICENAME+' does not exists'
-        gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
 msg = "Found Slice Info for "+SLICEURN
-gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 slice_crypt = SliceInfo['crypt']
 api = "getNodeInfo"
 if(FILE):
 	msg = "Fetching Manifest Info from the Cache"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	NodesJSON= f.readline()
 else:
 	msg = "Fetching Manifest Info from the GeniDesktop Parser"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-	NodesJSON = gemini_util.getJSONManifestFromParser(slice_crypt,gemini_util.SLICENAME,api,force_refresh,LOGFILE,debug)
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+	NodesJSON = gemini_util.getJSONManifestFromParser(slice_crypt,gemini_util.SLICENAME,api,force_refresh)
 try:
 	NodesOBJ = json.loads(NodesJSON)
 except ValueError:
@@ -243,13 +315,13 @@ except ValueError:
 		os.unlink(FILE)
 	
 	msg ="Nodes JSON Loading Error"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
-gemini_util.write_to_log(LOGFILE,NodesJSON,gemini_util.dontprinttoscreen,debug)
+gemini_util.write_to_log(NodesJSON,gemini_util.dontprinttoscreen)
 if(NodesOBJ['code'] != 0):
 	msg = NodesOBJ['output']+": No Manifest Available for : "+ SliceInfo['sliceurn']
-        gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
 Nodes = NodesOBJ['output']
@@ -282,17 +354,17 @@ for Node in Nodes:
 	"Its CMURN => "+cmurn+"\n"+ \
 	"Gemini Node Type => "+gemini_node_type+"\n"+ \
 	"MC Hostname => "+mchostname+"\n"+"**********************"
-        gemini_util.write_to_log(LOGFILE,msg,gemini_util.dontprinttoscreen,debug)
+        gemini_util.write_to_log(msg,gemini_util.dontprinttoscreen)
 
 msg = "***********************************\n"+\
 "You have "+str(len(MP_Nodes))+" MP Nodes and "+str(len(GN_Nodes))+" GN Nodes\n"+\
 "***********************************\n"
-gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 
 
 if (len(GN_Nodes) == 0):
 	msg = "No GN Nodes Present. Will not proceed"
-        gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
 dpadmin_username = "drupal_admin"
@@ -310,62 +382,46 @@ if(not FILE):
 	f.write(NodesJSON.strip())
 	f.close
 
+proclist = []
 for my_manager in managers:
 
-	# STEP 1: Check nodes for OS Compatibilty
-	msg = "Checking if Nodes at AM --> "+my_manager+" for \n"+"1. Check if Global Node Present\n2. Find Nodes to be monitored by GEMINI\n3. OS Compatibility of selected Nodes"
-	gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-	pruned_GN_Nodes = gemini_util.pruneNodes(GN_Nodes,my_manager,'GN',LOGFILE,debug)
+	msg =  "Starting instrumentize process for Nodes at ["+my_manager+"] "
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+	pruned_GN_Nodes = gemini_util.pruneNodes(GN_Nodes,my_manager,'GN')
 	if (len(pruned_GN_Nodes) == 0):
 		msg = "No GN Nodes Present that monitor MP Nodes at  AM = "+my_manager+" . Continuing with the next AM if available"
-		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 		continue
 	if (len(pruned_GN_Nodes) > 1):
 		msg = "Multiple GN Nodes Present that monitor this  AM = "+my_manager+" . This is not supported yet"
-		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 		sys.exit(1)
 
-	pruned_MP_Nodes = gemini_util.pruneNodes(MP_Nodes,my_manager,'',LOGFILE,debug)
+	pruned_MP_Nodes = gemini_util.pruneNodes(MP_Nodes,my_manager,'')
 
-	(result,msg) = gemini_util.precheckNodes(pruned_GN_Nodes[0],pruned_MP_Nodes,keyfile,LOGFILE,debug)
-	if(result):
-		msg = "All nodes at AM --> "+my_manager+" are GEMINI capable.\nWill proceed with the GENI Desktop Init Process"
-		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+	p = multiprocessing.Process(target=InitProcess,args=(my_manager,pruned_GN_Nodes,pruned_MP_Nodes,))
+	proclist.append(p)
+	p.start()                                                                                                                      
 
+while(True):
+	pending_proclist = []
+	for i in proclist:
+		if(i.exitcode is None):
+			pending_proclist.append(i)
+			continue
+		elif(i.exitcode != 0):
+			sys.exit(i.exitcode)
+		else:
+			continue
+	if not pending_proclist:
+		break
 	else:
-		msg = "ERROR @ {"+my_manager+"} :: "+msg
-		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-		sys.exit(1)
+		proclist = pending_proclist
+	time.sleep(5)
+	pass
 
-	(status,msg) = gemini_util.lock_unlock_MC(pruned_GN_Nodes[0],"init_lock",LOGFILE,keyfile,debug)
-	if(not status):
-		msg = msg + "\nConfiguring next AM if available"
-		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-		continue
-	else:
-		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
+gemini_util.closeLogPIPE(LOGFILE)
 
 
-	#Place on the GN Node - DRUPAL_ADMIN_PASSWORD , userurn , sliceurn , slicename, cmurn, cmhrn , vnc_passwd, topinfo, portal_public_key
-	(result,msg) = gemini_util.dump_Expinfo_on_GN(pruned_GN_Nodes[0],USERURN,email_id,user_password_for_drupal,SLICEURN,my_manager,dpadmin_username,dpadmin_passwd,slice_crypt,debug,LOGFILE,keyfile)
-	if(result):
-		msg = "GN that monitors MP Nodes at  "+my_manager+" has all the Exp info it needs. Will now proceed with the Initialization process."
-		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 
-	else:
-		msg = "GN ERROR @ {"+my_manager+"} :: while placing Exp info "+str(msg)
-		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-		sys.exit(1)
 
-	# STEP 2 : Download Passive measurement scripts and start ssh-key generator on the GN
-	# STEP 2b : Save MC public key onto a file pn GN, fetch it from the GN and place it on all MP Nodes
-	# STEP 3 : Install Shell in a box on all nodes and generate the Shellinabox config
-	(result,msg) = gemini_util.install_keys_plus_shell_in_a_box(pruned_GN_Nodes[0],pruned_MP_Nodes,user_public_key,debug,LOGFILE,keyfile)
-	if(result):
-		msg = "All nodes at AM --> "+my_manager+" have been Initialized."
-		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-
-	else:
-		msg = "ERROR @ {"+my_manager+"} :: during Initialization "+str(msg)
-		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-		sys.exit(1)

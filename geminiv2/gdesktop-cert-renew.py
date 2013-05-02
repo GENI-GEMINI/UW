@@ -23,10 +23,16 @@ import sys
 import getopt
 import os
 import time
-import hashlib
+import M2Crypto
+#import urllib
+import uuid
 import json
-import multiprocessing
+import time
+import datetime
+import tempfile
 import gemini_util	# Import user defined routines
+from lxml import etree
+from unisencoder.decoder import RSpec3Decoder
 
 other_details = ""
 managers = []
@@ -36,6 +42,7 @@ debug           = 0
 keyfile = ""
 force_refresh = '1'
 FILE = ''
+DONE=0
 
 
 def Usage():
@@ -53,21 +60,6 @@ def Usage():
 							[To be used by GENI Desktop only]
     -p file, --passphrase=file          read passphrase from file
                                             [default: ~/.ssl/password]"""
-
-def opStatusProcess(Node,queue):
-	global pKey
-
-	(init_status,ret_code,err_msg) = gemini_util.getLockStatus(Node,pKey)
-	if(ret_code == -1 ):
-		msg = "ERROR: "+err_msg
-       		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-		sys.exit(1)
-
-	if(init_status == ""):
-		init_status = "NOT_INITIALIZED"
-
-	queue.put([Node['sliver_id'],init_status])
-	return  
 
 try:
     opts, REQARGS = getopt.gnu_getopt( sys.argv[ 1: ], "dhxk:f:n:j:p:",
@@ -100,7 +92,7 @@ for opt, arg in opts:
 	else:
 		mylogbase = gemini_util.getLOGBASE()
 		LOCALTIME = time.strftime("%Y%m%dT%H:%M:%S",time.localtime(time.time()))
-		LOGFILE = mylogbase+"/gdesktop-opstatus-"+gemini_util.SLICENAME+"_"+LOCALTIME+".log"
+		LOGFILE = mylogbase+"/gdesktop-instrumentize-"+gemini_util.SLICENAME+"_"+LOCALTIME+".log"
 		gemini_util.ensure_dir(LOGFILE)
 		gemini_util.openLogPIPE(LOGFILE)
     elif opt in ( "-p", "--passphrasefile" ):
@@ -125,10 +117,10 @@ try:
 	cf = open(gemini_util.CERTIFICATE,'r')
 except:
 	msg = "Error opening Certificate"
-        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+        gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
 	sys.exit(1)
 
-# Check if passphrase provided for certificate is valid
+# Check if passphrase provided is valid
 # If passphrase is not provided prompt for it.
 CERT_pkey = gemini_util.getPkey(gemini_util.CERTIFICATE,"certificate")
 (CERT_ISSUER,username) = gemini_util.getCert_issuer_n_username()
@@ -144,7 +136,7 @@ if(not FILE):
 	if(not os.path.isfile(FILE)):
 		FILE = ''
 	elif((time.time() - os.stat(FILE)[8] ) > gemini_util.cache_expiry): # Assumes that if cache file is older than 15 minutes dont use it.
-		msg = "Cache is empty or invalid :EXPIRED "+str(time.time() - os.stat(FILE)[8]  - gemini_util.cache_expiry )+' seconds ago'
+		msg = "Cache is empty or invalid :EXPIRED "+str(time.time() - os.stat(FILE)[8] - gemini_util.cache_expiry )+' seconds ago'
 		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 		FILE = ''
 	else:
@@ -167,6 +159,7 @@ else:
 cf.close()
 try:
 	UserOBJ = json.loads(UserJSON)
+	gemini_util.write_to_log(UserJSON,gemini_util.dontprinttoscreen)
 except ValueError:
 	if(FILE):
 		#This assumes that the info in the cache is corrupted remove the cache and exit 
@@ -177,18 +170,18 @@ except ValueError:
 	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
-gemini_util.write_to_log(UserJSON,gemini_util.dontprinttoscreen)
 if (UserOBJ['code'] == 0):
 	UserInfo = UserOBJ['output']
 	username = UserInfo['uid']
 	email_id = UserInfo['email']
 	USERURN = UserInfo['userurn']
 	user_crypt = UserInfo['user_crypt']
-#	CERT_ISSUER = UserInfo['certificate_issuer']
+	#CERT_ISSUER = UserInfo['certificate_issuer']
 else:
 	msg = "User not identified : "+ UserOBJ['output']
         gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
+
 msg = "Found User Info for "+USERURN
 gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 if (FILE):
@@ -206,6 +199,7 @@ except ValueError:
 		#This assumes that the info in the cache is corrupted remove the cache and exit 
 		# So the next time its called again, fresh info from the parser is pulled
 		os.unlink(FILE)
+		
 	msg ="Slice JSON Loading Error"
 	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
@@ -243,21 +237,23 @@ else:
 	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	NodesJSON = gemini_util.getJSONManifestFromParser(slice_crypt,gemini_util.SLICENAME,api,force_refresh)
 try:
-	NodesOBJ = json.loads(NodesJSON.strip())
+	NodesOBJ = json.loads(NodesJSON)
+	gemini_util.write_to_log(NodesJSON,gemini_util.dontprinttoscreen)
 except ValueError:
 	if(FILE):
 		#This assumes that the info in the cache is corrupted remove the cache and exit 
 		# So the next time its called again, fresh info from the parser is pulled
 		os.unlink(FILE)
+	
 	msg ="Nodes JSON Loading Error"
 	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
-gemini_util.write_to_log(NodesJSON,gemini_util.dontprinttoscreen)
 if(NodesOBJ['code'] != 0):
 	msg = NodesOBJ['output']+": No Manifest Available for : "+ SliceInfo['sliceurn']
         gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
+
 
 Nodes = NodesOBJ['output']
 for Node in Nodes:
@@ -297,6 +293,43 @@ msg = "***********************************\n"+\
 gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 
 
+if (len(GN_Nodes) == 0):
+	msg = "No GN Nodes Present. Will not proceed"
+        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+	sys.exit(1)
+
+
+msg = "Fetching Lamp Certificate and other information from the GeniDesktop Parser"
+gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+LAMPJSON = gemini_util.getLampCert_n_details_FromParser(slice_crypt,user_crypt)
+try:
+	LAMPOBJ = json.loads(LAMPJSON)
+	gemini_util.write_to_log(LAMPJSON,gemini_util.dontprinttoscreen)
+except ValueError:
+	if(FILE):
+		#This assumes that the info in the cache is corrupted remove the cache and exit 
+		# So the next time its called again, fresh info from the parser is pulled
+		os.unlink(FILE)
+	
+	msg ="LAMP Info JSON Loading Error"
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+	sys.exit(1)
+
+slice_uuid = ''
+slicecred = ''
+expiry = ''
+LAMPCERT = ''
+if (LAMPOBJ['code'] == 0):
+	LampInfo = LAMPOBJ['output']
+	slicecred = LampInfo['credential']
+	expiry = LampInfo['expiry']
+	slice_uuid = LampInfo['uuid']
+	LAMPCERT = LampInfo['lampcert']
+else:
+	msg = "Error obtaining Lamp Info : "+ LAMPOBJ['output']
+        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+	sys.exit(1)
+
 if(not FILE):
 	# Save all jsons to cache
 	cachefilename = gemini_util.getCacheFilename(CERT_ISSUER,username,gemini_util.SLICENAME)
@@ -306,35 +339,98 @@ if(not FILE):
 	f.write(SliceJSON.strip()+"\n")
 	f.write(NodesJSON.strip())
 	f.close
+	
+if(LAMPCERT == ''):
+	msg = "Lamp Certificate was Not Found. Some services may not work correctly"
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 
 
-if (len(GN_Nodes) == 0):
-	msg = "No GN Nodes Present. Will not proceed"
+SLICECRED_FOR_LAMP = slicecred.replace('<?xml version="1.0" encoding="UTF-8" standalone="no"?>','',1).lstrip()
+slice_lifetime = {}
+if (slice_uuid):
+        expiration = datetime.datetime.strptime(expiry,"%Y-%m-%dT%H:%M:%SZ")
+        now = datetime.datetime.now(expiration.tzinfo)
+        td = expiration - now
+        slice_lifetime = int(td.seconds + td.days * 24 * 3600)
+	validity = datetime.timedelta(seconds=slice_lifetime)
+	slice_lifetime = validity.days + 1
+	#Now setup a proxy cert for the instrumentize script so we can talk to UNIS without keypass
+	gemini_util.makeInstrumentizeProxy(slice_lifetime,slice_uuid)
+	if not (gemini_util.PROXY_ATTR):
+		msg = "ERROR: Could not complete proxy certificate creation for instrumentize process"
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+		msg = "Active Services will be disabled to continue with the Instrumentation process"
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+		gemini_util.DISABLE_ACTIVE = gemini_util.TRUE
+
+	# temporary hack to write out an unencrypted keyfile for the slice registration call to UNIS
+	TEMP_KEYFILE = gemini_util.getUnencryptedKeyfile(CERT_pkey)
+	msg="Registering slice credential with Global UNIS"
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+	res1 = gemini_util.postDataToUNIS(TEMP_KEYFILE,gemini_util.CERTIFICATE,"/credentials/genislice",slicecred)
+	os.remove(TEMP_KEYFILE)
+	f = open(gemini_util.PROXY_ATTR)
+	res2 = gemini_util.postDataToUNIS(gemini_util.PROXY_KEY,gemini_util.PROXY_CERT,"/credentials/geniuser",f)
+	f.close()
+	os.remove(gemini_util.PROXY_ATTR)
+	if res1 or res2 is None:
+		msg="Failed to register slice credential"
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+		msg = "Active Services will be disabled to continue with the Instrumentation process"
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+		gemini_util.DISABLE_ACTIVE = gemini_util.TRUE
+else:
+        msg = "Could not get slice UUID from slice credential. GEMINI Services may fail."
         gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
-status = {}
-proclist = []
-results = []
-for Node in GN_Nodes:
+gn_ms_proxycert_file = None
+gn_ms_proxykey_file= None
+mp_blipp_proxycert_file = None
+mp_blipp_proxykey_file = None 
+irods_proxycert_file = None
+(gn_ms_proxycert_file,gn_ms_proxykey_file,mp_blipp_proxycert_file,mp_blipp_proxykey_file,irods_proxycert_file) = gemini_util.generate_all_proxycerts(slice_lifetime,slice_uuid)
 
-	result_queue = multiprocessing.Queue()
-	p = multiprocessing.Process(target=opStatusProcess,args=(Node,result_queue,))
-	proclist.append(p)
-	p.start()                                                                                                                      
-	results.append(result_queue)
+lpc = tempfile.NamedTemporaryFile()
+cert_file = lpc.name
+lpc.write(LAMPCERT)
+lpc.flush()
+for my_manager in managers:
 
-for i in proclist:
-	i.join()
-	if(i.exitcode != 0):
-		sys.exit(i.exitcode)
+	# STEP 1: Check nodes for OS Compatibilty
+	pruned_GN_Nodes = gemini_util.pruneNodes(GN_Nodes,my_manager,'GN')
+	if (len(pruned_GN_Nodes) == 0):
+		msg = "No GN Nodes that monitor MP Nodes at  AM = "+my_manager+" present. Continuing with the next AM if available"
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+		continue
+	if (len(pruned_GN_Nodes) > 1):
+		msg = "Multiple GN Nodes that monitor MP Nodes at AM = "+my_manager+" present . This is not supported yet"
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+		sys.exit(1)
 
-for result in results:
-	if(not result.empty()):
-		l = result.get()
-		status[l[0]] = l[1]
+	pruned_MP_Nodes = gemini_util.pruneNodes(MP_Nodes,my_manager,'')
 
+	msg = "Generating and installing certificates"
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+	if(not gemini_util.DISABLE_ACTIVE):
+		gemini_util.install_GN_Certs(pruned_GN_Nodes,pKey,gn_ms_proxycert_file,gn_ms_proxykey_file)
+		gemini_util.install_MP_Certs(pruned_MP_Nodes,pKey,mp_blipp_proxycert_file,mp_blipp_proxykey_file)
+	gemini_util.install_irods_Certs(pruned_GN_Nodes,pKey,irods_proxycert_file)
+
+	cmd = "sudo cp /var/emulab/boot/lampcert.pem /usr/local/etc/protogeni/ssl/lampcert.pem;"
+	for node in pruned_GN_Nodes:
+		add_cmd = "sudo /etc/init.d/httpd reload;"
+		gemini_util.installLAMPCert(node,pKey,cert_file,cmd+add_cmd)
+	
+	for node in pruned_MP_Nodes:
+		gemini_util.installLAMPCert(node,pKey,cert_file,cmd)
+
+	DONE=1
+
+
+tmp_proxyfiles = [gemini_util.PROXY_CERT,gemini_util.PROXY_KEY,gn_ms_proxycert_file,gn_ms_proxykey_file,mp_blipp_proxycert_file,mp_blipp_proxykey_file,irods_proxycert_file]
+status = gemini_util.delete_all_temp_proxyfiles(tmp_proxyfiles)
+if(DONE):
+	msg = "Gemini Instrumentize Complete\n Go to the GeniDesktop to login"
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 gemini_util.closeLogPIPE(LOGFILE)
-print json.dumps(status)
-
-
