@@ -77,6 +77,7 @@ SUPPORTED_FLAG='/var/emulab/lock/SUPPORTED'
 measure_scripts_path="/usr/testbed/bin/measure-scripts"
 ARCHIVE_CMD_FILE=measure_scripts_path+"/archive_cmd.sh"
 version="0.2"
+devel_version="0.3"
 mc_repo_rooturl="http://gemini.netlab.uky.edu/"
 lampca = "https://unis.incntre.iu.edu/protogeni/xmlrpc/lampca"
 UNIS_URL = "https://unis.incntre.iu.edu:8443"
@@ -438,10 +439,10 @@ def precheckNodes(GN_Node,MP_Nodes,pKey):
 	pre_cmd ="rm -rf "+EXP_NODE_tmppath+"/sudoers.tgz;wget -P "+EXP_NODE_tmppath+" "+INSTOOLS_repo_url+"tarballs/sudoers.tgz;";
 	cmd = SUDO+"tar xzf "+EXP_NODE_tmppath+"/sudoers.tgz -C /"
 
-	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',pre_cmd,None,None)
+	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',pre_cmd,None,None,pty=True)
 	write_to_processlog(out_ssh,err_ssh)
 
-	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
+	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None,pty=True)
 	write_to_processlog(out_ssh,err_ssh)
 	if (ret_code != 0):
 		msg =  " (Node : "+vid+") "+err_ssh+"\nInstrumentization will terminate. Please make sure your experiment is running"
@@ -466,10 +467,10 @@ def precheckNodes(GN_Node,MP_Nodes,pKey):
 		pre_cmd ="rm -rf "+EXP_NODE_tmppath+"/sudoers.tgz;wget -P "+EXP_NODE_tmppath+" "+INSTOOLS_repo_url+"tarballs/sudoers.tgz;";
 		cmd = SUDO+"tar xzf "+EXP_NODE_tmppath+"/sudoers.tgz -C /"
 
-		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',pre_cmd,None,None)
+		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',pre_cmd,None,None,pty=True)
 		write_to_processlog(out_ssh,err_ssh)
 
-		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
+		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None,pty=True)
 		write_to_processlog(out_ssh,err_ssh)
 		if (ret_code != 0):
 			msg =  hostname+" at port "+port+" (Node : "+vid+") is not responding\nInstrumentization will terminate. Please make sure your experiment is running"+"\n"+err_ssh
@@ -693,7 +694,7 @@ def lock_unlock_MC(GN_Node,what_to_do,pKey):
 			elif(what_to_do == "install_lock"):
 				return TRUE,msg
 		elif(lockstatus == "INSTALLATION_IN_PROGRESS" and what_to_do == 'install_lock'):
-			msg = "Global Node "+GN_Node['nodeid']+" software Installation is in progress\nWill check again in 15 seconds...."
+			msg = "Global Node "+GN_Node['nodeid']+" software Installation for passive measurements is in progress\nWill check again in 15 seconds...."
 			write_to_log(msg,printtoscreen)
 			time.sleep(15)
 			continue
@@ -1216,11 +1217,6 @@ def createBlippServiceEntries(MP_Nodes,GN_Node,slice_uuid):
 					     }}})
 	
 	for node in MP_Nodes:
-		#cnode = None
-		#for n in UNISTopo["nodes"]:
-		#	if n["name"] == node["nodeid"]:
-		#		cnode = n
-		#               break
 		
 		post_desc = service_desc
 		post_desc.update({"runningOn": {"href": UNIS_URL+"/nodes/"+node["machine_hostname"],
@@ -1354,7 +1350,7 @@ def getPkey(keyfile,filetype,keypassphrase = None):
 		passphrase = keypassphrase
 	return pKey_object
 
-def sshConnection(hostname,port,username,pkey_object,what_to_do,cmd=None,localFile=None,remoteFile=None):
+def sshConnection(hostname,port,username,pkey_object,what_to_do,cmd=None,localFile=None,remoteFile=None,pty=False):
 #' > /dev/null 2>&1 &'
 
 	passphrase = None
@@ -1418,17 +1414,7 @@ def sshConnection(hostname,port,username,pkey_object,what_to_do,cmd=None,localFi
 		ret_code = 0
 		pass
 	elif(what_to_do == 'ssh' ):
-#		(stdin,stdout,stderr)= ssh.exec_command(cmd+';echo $?')
-		#(stdin,stdout,stderr)= ssh.exec_command(cmd)
-#		stdin.close()
-#		sout_n_exitval = stdout.read().rsplit('\n',2)
-#		if(len(sout_n_exitval) == 2 ):
-#			ret_code = sout_n_exitval[0]
-#		elif(len(sout_n_exitval) > 2 ):
-#			sout = sout_n_exitval[len(sout_n_exitval) - 3]
-#			ret_code = sout_n_exitval[len(sout_n_exitval) - 2]
-#		serr = stderr.read()
-		result = run_remote(ssh,cmd)
+		result = run_remote(ssh,cmd,pty)
 		serr = result['stderr']
 		sout = result['stdout']
 		ret_code = result['exit_status']
@@ -1443,37 +1429,20 @@ def sshConnection(hostname,port,username,pkey_object,what_to_do,cmd=None,localFi
 # Routine taken from
 # http://od-eon.com/blogs/stefan/automating-remote-commands-over-ssh-paramiko/
 #This is a modified version by Hussam
-def run_remote(ssh, cmd, check_exit_status=True, verbose=True):
+def run_remote(ssh, cmd,pty=False,check_exit_status=True, verbose=True):
     result = {}
     chan = ssh.get_transport().open_session()
     stdin = chan.makefile('wb')
     stdout = chan.makefile('rb')
     stderr = chan.makefile_stderr('rb')
-    processed_cmd = cmd
-#    if ssh.use_sudo:
-#        processed_cmd = 'sudo -S bash -c "%s"' % cmd.replace('"', '\\"')
-    chan.exec_command(processed_cmd)
-#    if stdout.channel.closed is False: # If stdout is still open then sudo is asking us for a password
-#        stdin.write('%s\n' % ssh.password)
-#        stdin.flush()
+    if(pty):
+	    chan.get_pty()
+    chan.exec_command(cmd)
     exit_status = chan.recv_exit_status()
     result['exit_status'] = exit_status
     result['stdout'] = '\n'.join(stdout)
     result['stderr'] = '\n'.join(stderr)
-#    def print_output():
-#        for line in stdout:
-#            result['stdout'].append(line)
-#            print line,
-#        for line in stderr:
-#            result['stderr'].append(line)
-#            print line,
-##    if check_exit_status and exit_status != 0:
-#        print_output()
-#        print 'non-zero exit status (%d) when running "%s"' % (exit_status, cmd)
-#        exit(exit_status)
-#    if verbose:
-#        print processed_cmd
-#        print_output()
+
     return result
 
 def getLOGBASE():

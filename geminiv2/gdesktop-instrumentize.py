@@ -43,6 +43,7 @@ def Usage():
         print "usage: " + sys.argv[ 0 ] + " [option...]"
         print """Options:
     -d, --debug                         be verbose about XML methods invoked
+    --devel	                        Use Devel version [only for developers]
     -x, --no_force_refresh                  Do not force parser to get fresh manifests from AMs
     -k, --pkey=file			Private SSH RSA Key file
     -f file, --certificate=file         read SSL certificate from file
@@ -144,8 +145,7 @@ def InstrumentizeProcess(my_manager,pruned_GN_Nodes,pruned_MP_Nodes,q):
 try:
     opts, REQARGS = getopt.gnu_getopt( sys.argv[ 1: ], "dhxk:f:n:j:p:",
                                    [ "debug","help","no_force_refresh","pkey=","certificate=",
-                                     "slicename=","loadFromFile="
-                                     "passphrase="] )
+                                     "slicename=","loadFromFile=","devel","passphrase="] )
 except getopt.GetoptError, err:
     print >> sys.stderr, str( err )
     Usage()
@@ -156,6 +156,8 @@ args = REQARGS
 for opt, arg in opts:
     if opt in ( "-d", "--debug" ):
         gemini_util.debug = 1
+    elif opt in ( "--devel" ):
+        gemini_util.version = gemini_util.devel_version
     elif opt in ( "-x","--no_force_refresh" ):
         force_refresh = '0'
     elif opt in ( "-f", "--certificatefile" ):
@@ -497,6 +499,23 @@ for my_manager in managers:
 	proclist.append(p)
 	results.append(my_queue)
 	p.start()                                                                                                                      
+
+#while(True):
+#	pending_proclist = []
+#	for i in proclist:
+#		if(i.exitcode is None):
+#			pending_proclist.append(i)
+#			continue
+#		elif(i.exitcode != 0):
+#			sys.exit(i.exitcode)
+#		else:
+#			continue
+#	if not pending_proclist:
+#		break
+#	else:
+#		proclist = pending_proclist
+#	time.sleep(5)
+#	pass
 
 
 for i in proclist:
