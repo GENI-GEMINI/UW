@@ -954,7 +954,7 @@ def LAMP_sendmanifest(SLICEURN,manifest,LAMPCERT,SLICECRED_FOR_LAMP):
 		cred.close
 	return state,msg
 
-def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,SLICEUUID,LAMPCERT,pKey):
+def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,SLICEUUID,UNISTopo,LAMPCERT,pKey):
 
 	global EXP_NODE_tmppath
 	global INSTOOLS_repo_url
@@ -974,10 +974,14 @@ def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,SLICEUUID,LAMP
 	#sudo install -D -g geniuser -o root -m 440 /tmp/lampcert.pem  /usr/local/etc/protogeni/ssl/
 
 	GNHOST = GN_Node['hostname']
+	UNIS_ID = findUNISNodeID(UNISTopo,GN_Node)
+	if UNIS_ID is None:
+		msg = "Could not find matching UNIS node for %s" % GN_Node["name"]
+		write_to_log(msg,printoscreen)
 
 	#Install software on GN Node regardless
 	NODE_TYPE = "GN"
-	cmd = "cd "+EXP_NODE_tmppath+";sudo rm -rf ACTIVE_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/ACTIVE_SETUP.tgz;tar xzf ACTIVE_SETUP.tgz;sudo ./ACTIVE_SETUP.sh "+NODE_TYPE+" INSTALL "+SLICEURN+" "+USERURN+" "+GNHOST+" "+SLICEUUID
+	cmd = "cd "+EXP_NODE_tmppath+";sudo rm -rf ACTIVE_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/ACTIVE_SETUP.tgz;tar xzf ACTIVE_SETUP.tgz;sudo ./ACTIVE_SETUP.sh "+NODE_TYPE+" INSTALL "+SLICEURN+" "+USERURN+" "+GNHOST+" "+SLICEUUID+" "+UNIS_ID
 	p = multiprocessing.Process(target=ActiveInstall,args=(GN_Node,cmd,cert_file,pKey,))
 	proclist.append(p)
 	p.start()                                                                                                                      
@@ -988,7 +992,12 @@ def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,SLICEUUID,LAMP
 			continue
 
 		NODE_TYPE = "MP"
-		cmd = "cd "+EXP_NODE_tmppath+";sudo rm -rf ACTIVE_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/ACTIVE_SETUP.tgz;tar xzf ACTIVE_SETUP.tgz;sudo ./ACTIVE_SETUP.sh "+NODE_TYPE+" INSTALL "+SLICEURN+" "+USERURN+" "+GNHOST+" "+SLICEUUID
+		UNIS_ID = findUNISNodeID(UNISTopo,Node)
+		if UNIS_ID is None:
+			msg = "Could not find matching UNIS node for %s" % Node["name"]
+			write_to_log(msg,printoscreen)
+
+		cmd = "cd "+EXP_NODE_tmppath+";sudo rm -rf ACTIVE_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/ACTIVE_SETUP.tgz;tar xzf ACTIVE_SETUP.tgz;sudo ./ACTIVE_SETUP.sh "+NODE_TYPE+" INSTALL "+SLICEURN+" "+USERURN+" "+GNHOST+" "+SLICEUUID+" "+UNIS_ID
 		#Install software on MP Nodes
 	        p = multiprocessing.Process(target=ActiveInstall,args=(Node,cmd,cert_file,pKey,))
 		proclist.append(p)
@@ -1025,7 +1034,7 @@ def installLAMPCert(Node,pKey,cert_file,add_cmd):
 
 def ActiveInstall(Node,node_cmd,cert_file,pKey):
 	global EXP_NODE_tmppath
-	
+
 	my_cmurn = Node['cmurn']
 	sliver_urn = Node['sliver_id']
 	hostname = Node['login_hostname']
@@ -1201,7 +1210,7 @@ def install_MP_Certs(MP_Nodes,pKey,mp_blipp_proxycert_file,mp_blipp_proxykey_fil
 
 	pass
 
-def createBlippServiceEntries(MP_Nodes,GN_Node,slice_uuid):
+def createBlippServiceEntries(MP_Nodes,GN_Node,UNISTopo,slice_uuid):
 	service_desc = dict()
 	service_desc.update({"$schema": UNIS_SCHEMAS["service"]})
 	service_desc.update({"serviceType": "ps:tools:blipp"})
@@ -1217,12 +1226,32 @@ def createBlippServiceEntries(MP_Nodes,GN_Node,slice_uuid):
 					     }}})
 	
 	for node in MP_Nodes:
-		
+		UNIS_ID = findUNISNodeID(UNISTopo,node)
+		if UNIS_ID is None:
+			msg = "Could not find matching UNIS node for %s" % node["name"]
+			write_to_log(msg,printoscreen)
+			continue
+
 		post_desc = service_desc
-		post_desc.update({"runningOn": {"href": UNIS_URL+"/nodes/"+node["machine_hostname"],
+		post_desc.update({"runningOn": {"href": UNIS_URL+"/nodes/"+UNIS_ID,
 						"rel": "full"}})
 		post_str = json.dumps(post_desc)
 		postDataToUNIS(PROXY_KEY,PROXY_CERT,"/services",post_str)
+
+def findUNISNodeID(UNISTopo,parserNode):
+	if not UNISTopo:
+		return None
+	
+	unode = None
+	for n in UNISTopo["nodes"]:
+		if n["name"] == parserNode["nodeid"]:
+			unode = n
+			break
+
+	if unode is not None:
+		return unode["id"]
+	else:
+		return None
 
 def getUnencryptedKeyfile(cert_pKey):
 
@@ -1234,6 +1263,63 @@ def getUnencryptedKeyfile(cert_pKey):
 	TKF.close()
 	return TKF.name
 
+def getUNISTopo(key,cert,endpoint):
+	url = UNIS_URL
+	o = urlparse.urlparse(url)
+	topo = None
+
+	try:
+		conn = httplib.HTTPSConnection(o.hostname, o.port, key, cert)
+		conn.request("GET", endpoint)
+		r = conn.getresponse()
+		data = r.read()
+	
+		if r.status is not 200:
+			write_to_log("GET from UNIS at "+url,printtoscreen)
+			write_to_log(data,printtoscreen)
+			return None
+	
+		topo = json.loads(data)
+	
+		if "links" in topo:
+			larray = []
+			for l in topo["links"]:
+				o = urlparse.urlparse(l["href"])
+				conn.request("GET", o.path+"?limit=1", None)
+				r = conn.getresponse()
+				data = r.read()
+				link = json.loads(data)
+				larray.append(link)
+				topo["links"] = larray
+			
+		if "nodes" in topo:
+			narray = []
+			for n in topo["nodes"]:
+				o = urlparse.urlparse(n["href"])
+				conn.request("GET", o.path+"?limit=1", None)
+				r = conn.getresponse()
+				data = r.read()
+				node = json.loads(data)
+				narray.append(node)
+				topo["nodes"] = narray
+
+		if "ports" in topo:
+			parray = []
+			for p in topo["ports"]:
+				o = urlparse.urlparse(p["href"])
+				conn.request("GET", o.path+"?limit=1", None)
+				r = conn.getresponse()
+				data = r.read()
+				port = json.loads(data)
+				parray.append(port)
+				topo["ports"] = parray	
+				
+	except Exception as e:
+		msg = "Could not get UNIS topology: %s" % e
+		write_to_log(msg,printtoscreen)
+			
+	return topo
+	
 #POST some data to specified UNIS endpoints
 def postDataToUNIS(key,cert,endpoint,data):
 	url = UNIS_URL+endpoint
@@ -1256,7 +1342,6 @@ def postDataToUNIS(key,cert,endpoint,data):
 	else:
 		return data
 
-
 #Obtain Slice Credential from GeniDesktop Parser
 def getLampCert_n_details_FromParser(slice_crypt,user_crypt):
 
@@ -1267,23 +1352,6 @@ def getLampCert_n_details_FromParser(slice_crypt,user_crypt):
 	post_return = post_response.read()
 
 	return post_return
-
-#Download Manifest from the GeniDesktop Parser Service after identifying your self
-def downloadManifestFromParser(user_crypt,slice_crypt,cmurn,LOGFILE,debug):
-        post_data = urllib.urlencode({'slice_crypt':slice_crypt, 'user_crypt':user_crypt,'urn':cmurn})
-        #post_response = urllib.urlopen('https://parser.netlab.uky.edu/downloadManifest.php',post_data)
-        url = 'https://parser.netlab.uky.edu/downloadManifest.php'
-        req = urllib2.Request(url,post_data)
-        post_response = urllib2.urlopen(req)
-        post_return = post_response.read()
-        try:
-                parseString(post_return)
-                return post_return # Means returning a valid XML file as string
-        except:
-                return ''
-                pass
-
-
 
 #Obtain userinfo using Credentials from GeniDesktop Parser
 def getUserinfoFromParser(cert,passphrase):
