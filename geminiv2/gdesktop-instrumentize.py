@@ -501,8 +501,8 @@ for my_manager in managers:
 
 	pruned_MP_Nodes = gemini_util.pruneNodes(MP_Nodes,my_manager,'')
 
-	#endpoint = "/domains/%s" % my_manager.replace('+authority+cm','')+'+slice+'+SLICENAME
-	endpoint = "/domains/%s" % SLICEURN.replace('urn:publicid:IDN+','').replace('+','_')
+	endpoint = "/domains/%s" % (my_manager.replace('urn:publicid:IDN+','').replace('+authority+cm','')+'+slice+'+gemini_util.SLICENAME).replace('+','_')
+	#endpoint = "/domains/%s" % SLICEURN.replace('urn:publicid:IDN+','').replace('+','_')
 	unis_topo[my_manager] = gemini_util.getUNISTopo(gemini_util.PROXY_KEY,gemini_util.PROXY_CERT,endpoint)
 
 	my_queue = multiprocessing.Queue()
