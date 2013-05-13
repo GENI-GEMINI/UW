@@ -1268,6 +1268,23 @@ def getLampCert_n_details_FromParser(slice_crypt,user_crypt):
 
 	return post_return
 
+#Download Manifest from the GeniDesktop Parser Service after identifying your self
+def downloadManifestFromParser(user_crypt,slice_crypt,cmurn,LOGFILE,debug):
+        post_data = urllib.urlencode({'slice_crypt':slice_crypt, 'user_crypt':user_crypt,'urn':cmurn})
+        #post_response = urllib.urlopen('https://parser.netlab.uky.edu/downloadManifest.php',post_data)
+        url = 'https://parser.netlab.uky.edu/downloadManifest.php'
+        req = urllib2.Request(url,post_data)
+        post_response = urllib2.urlopen(req)
+        post_return = post_response.read()
+        try:
+                parseString(post_return)
+                return post_return # Means returning a valid XML file as string
+        except:
+                return ''
+                pass
+
+
+
 #Obtain userinfo using Credentials from GeniDesktop Parser
 def getUserinfoFromParser(cert,passphrase):
 
