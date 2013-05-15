@@ -341,7 +341,7 @@ def manifest_to_unis(manifest, slice_id):
     topology = unis_dom.documentElement
     topology.setAttribute('id', 'genitopo')
     
-    slice_id = slice_id.replace("urn:publicid:IDN+", "")
+    slice_id = slice_id.replace("urn:publicid:IDN+", "").replace(":","+")
     domain = unis_dom.createElementNS(UNIS_NS, "domain")
     domain.setAttribute('id', create_urn(domain=slice_id))
     topology.appendChild(domain)
