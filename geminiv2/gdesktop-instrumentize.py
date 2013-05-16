@@ -68,6 +68,7 @@ def InstrumentizeProcess(my_manager,pruned_GN_Nodes,pruned_MP_Nodes,q):
 	global SLICEURN
 	global slice_uuid
 	global LAMPCERT
+	global unis_topo
 
 	# This lock will also install sftware needed for Passive measurements on GN which cannot be done in parallel
 	# with any other operations
@@ -120,11 +121,15 @@ def InstrumentizeProcess(my_manager,pruned_GN_Nodes,pruned_MP_Nodes,q):
 	if(not gemini_util.DISABLE_ACTIVE):
 		msg = "Creating BLiPP service configurations, sending to UNIS for nodes at "+my_manager
 		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-		gemini_util.createBlippServiceEntries(pruned_MP_Nodes,pruned_GN_Nodes[0],slice_uuid)
+		gemini_util.createBlippServiceEntries(pruned_MP_Nodes,pruned_GN_Nodes[0],unis_topo[my_manager],slice_uuid)
 
 		msg = "Installing and configuring MP Nodes for Active Measurements at "+my_manager
 		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-		gemini_util.install_Active_measurements(pruned_MP_Nodes,pruned_GN_Nodes[0],USERURN,SLICEURN,slice_uuid,LAMPCERT,pKey)
+		gemini_util.install_Active_measurements(pruned_MP_Nodes,pruned_GN_Nodes[0],USERURN,SLICEURN,slice_uuid,unis_topo[my_manager],LAMPCERT,pKey)
+	(status,msg) = gemini_util.workaroud_for_unified_gemini_devel(pruned_GN_Nodes[0],pKey)
+	if(not status):
+		msg = msg + "\nERROR @ {"+my_manager+"} :: Problem Implementing devel workaround\n"
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 
 	gemini_util.initialize_Drupal_menu(pruned_GN_Nodes[0],pKey)
 	# Unlock the GN
@@ -158,6 +163,7 @@ for opt, arg in opts:
         gemini_util.debug = 1
     elif opt in ( "--devel" ):
         gemini_util.version = gemini_util.devel_version
+	gemini_util.INSTOOLS_repo_url = gemini_util.mc_repo_rooturl+"GEMINI/"+gemini_util.version+"/"
     elif opt in ( "-x","--no_force_refresh" ):
         force_refresh = '0'
     elif opt in ( "-f", "--certificatefile" ):
@@ -476,6 +482,7 @@ irods_proxycert_file = None
 (gn_ms_proxycert_file,gn_ms_proxykey_file,mp_blipp_proxycert_file,mp_blipp_proxykey_file,irods_proxycert_file) = gemini_util.generate_all_proxycerts(slice_lifetime,slice_uuid)
 proclist = []
 results = []
+unis_topo = {}
 for my_manager in managers:	
 
 	msg =  "Starting instrumentize process for Nodes at "+my_manager
@@ -493,6 +500,10 @@ for my_manager in managers:
 		sys.exit(1)
 
 	pruned_MP_Nodes = gemini_util.pruneNodes(MP_Nodes,my_manager,'')
+
+	endpoint = "/domains/%s" % (my_manager.replace('urn:publicid:IDN+','').replace('+authority+cm','')+'+slice+'+gemini_util.SLICENAME).replace('+','_')
+	#endpoint = "/domains/%s" % SLICEURN.replace('urn:publicid:IDN+','').replace('+','_')
+	unis_topo[my_manager] = gemini_util.getUNISTopo(gemini_util.PROXY_KEY,gemini_util.PROXY_CERT,endpoint)
 
 	my_queue = multiprocessing.Queue()
 	p = multiprocessing.Process(target=InstrumentizeProcess,args=(my_manager,pruned_GN_Nodes,pruned_MP_Nodes,my_queue,))

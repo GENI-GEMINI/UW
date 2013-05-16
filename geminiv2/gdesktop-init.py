@@ -141,6 +141,7 @@ for opt, arg in opts:
         gemini_util.debug = 1
     elif opt in ( "--devel" ):
         gemini_util.version = gemini_util.devel_version
+	gemini_util.INSTOOLS_repo_url = gemini_util.mc_repo_rooturl+"GEMINI/"+gemini_util.version+"/"
     elif opt in ( "-x","--no_force_refresh" ):
         force_refresh = '0'
     elif opt in ( "-f", "--certificatefile" ):
