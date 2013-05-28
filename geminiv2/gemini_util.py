@@ -1393,9 +1393,24 @@ def getJSONManifestFromParser(slice_crypt,slicename,api,force_refresh):
 	post_return = post_response.read()
 	return post_return
 
+def getPassphraseFromFile():
+	global PASSPHRASEFILE
+	global passphrase
+
+	try:
+		passphrase = open(PASSPHRASEFILE).readline()
+		passphrase = passphrase.strip()
+		return passphrase
+	except IOError, e:
+		print 'Error reading passphrase file %s: %s' % (PASSPHRASEFILE,e.strerror)
+		passphrase = None
+	return passphrase
+		
+
 def getPkey(keyfile,filetype,keypassphrase = None):
 	global passphrase
 	global PASSPHRASEFILE
+	TKF = tempfile.NamedTemporaryFile()
 
 	while(True):
 		try:
@@ -1403,13 +1418,9 @@ def getPkey(keyfile,filetype,keypassphrase = None):
 			break
 		except paramiko.PasswordRequiredException:
 			if(filetype == "certificate" and os.path.exists(PASSPHRASEFILE)):
-				try:
-					print "\nPrivate "+filetype+" file "+keyfile+" is encrypted. Trying to read passphase from "+PASSPHRASEFILE+"\n"
-					keypassphrase = open(PASSPHRASEFILE).readline()
-					keypassphrase = keypassphrase.strip()
-				except IOError, e:
-					print 'Error reading passphrase file %s: %s' % (PASSPHRASEFILE,e.strerror)
-
+				print "\nPrivate "+filetype+" file "+keyfile+" is encrypted. Trying to read passphase from "+PASSPHRASEFILE+"\n"
+				keypassphrase = getPassphraseFromFile()
+				if(keypassphrase == None):
 					msg1 = 'Do you want to continue (Y / N)? [DEFAULT: Y]  : '
 					user_input = raw_input(msg1)
 					if user_input in ['N','n']:
@@ -1420,17 +1431,32 @@ def getPkey(keyfile,filetype,keypassphrase = None):
 				print "\nPrivate "+filetype+" file "+keyfile+" is encrypted. Please provide the correct passphrase\n"
 				from M2Crypto.util import passphrase_callback
 				keypassphrase = str(passphrase_callback(1, prompt1='Enter passphrase:', prompt2='Verify passphrase:'))
-		except paramiko.SSHException:
-			print "\nInvalid Passphrase provided. Please Try Again\n"
+		except paramiko.SSHException , e:
+			if(e.message == 'not a valid RSA private key file'):
+				keypassphrase = getPassphraseFromFile()
+				command = 'openssl rsa -in '+keyfile+' -passin pass:'+keypassphrase+' -out '+TKF.name
+				process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)	
+				(out, err) = process.communicate()
+				retcode = process.returncode
+				if(retcode == 0):
+					keyfile = TKF.name
+					pKey_object = paramiko.RSAKey.from_private_key_file(keyfile)
+					break
+				else:
+					print err+"\nnot a valid RSA private key file. Will not proceed \n"
+					sys.exit(1)
+			else:
+				raise
+				print "\nInvalid Passphrase provided. Please Try Again\n"
 
-			msg1 = 'Do you want to continue (Y / N)? [DEFAULT: Y]  : '
-			user_input = raw_input(msg1)
-			if user_input in ['N','n']:
-				sys.exit(1)
-			keypassphrase = None
-			if(filetype == "certificate"):
-				PASSPHRASEFILE = ""
-		pass
+				msg1 = 'Do you want to continue (Y / N)? [DEFAULT: Y]  : '
+				user_input = raw_input(msg1)
+				if user_input in ['N','n']:
+					sys.exit(1)
+				keypassphrase = None
+				if(filetype == "certificate"):
+					PASSPHRASEFILE = ""
+			pass
 	if(filetype == "certificate"):
 		passphrase = keypassphrase
 	return pKey_object
