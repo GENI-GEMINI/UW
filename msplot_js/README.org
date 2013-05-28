@@ -1,0 +1,30 @@
+* Usage
+** Quickstart
+Point your browser to the plots.html file.
+Update the constants at the top of ms_plot.js to point to live instances of UNIS and the MS.
+Update MD_QUERY to a query that returns some metadata. You should be able to refresh plots.html and see some graphs.
+
+
+** In depth instructions
+These instructions assume you're testing everything on your local machine.
+1. Start up a UNIS/MS instance with AUTH and SSL turned off. See README [[https://github.com/periscope-ps/unis][here]].
+2. Start BLiPP on your local machine - make sure it's configured to report to your local UNIS/MS, by default:
+   "unis_url": "http://localhost:8888",
+   "ms_url" : "http://localhost:8888"
+3. BLiPP should start reporting whatever metrics you've told it to
+   collect. Go to http://localhost:8888 in your browser and start
+   clicking around. Make sure that there is stuff in /metadata, then
+   copy one of the ids from metadata and go to
+   localhost:8888/data/[copied ID] to see if data is being collected.
+4. Look at the constants at the top of ms_plot.js, make sure UNIS_URL
+   and MS_URL are http://localhost:8888.
+5. The MD_QUERY string will be appended to http://localhost:8888 -
+   make sure it returns some metadata that has corresponding data as
+   described in step 3. The generated graphs will be of all metrics
+   returned by this query.
+6. The INITIAL_DATA_QUERY can be left as an empty string, unless you
+   want to limit the number of results returned (for performance
+   reasons). See the [[http://monitor.incntre.iu.edu/docs/rest/query_ref.html][UNIS query docs]] for how to do this.
+7. Now point your browser to the plots.html file. If you don't see
+   plots, make sure that the metadata query returns some metadata and
+   that those ids correspond to some data.
