@@ -1438,7 +1438,10 @@ def getPkey(keyfile,filetype,keypassphrase = None):
 		except paramiko.SSHException , e:
 			if(e.message == 'not a valid RSA private key file'):
 				keypassphrase = getPassphraseFromFile()
-				command = 'openssl rsa -in '+keyfile+' -passin pass:'+keypassphrase+' -out '+TKF.name
+				if(keypassphrase == '' or keypassphrase is None):
+					command = 'openssl rsa -in '+keyfile+' -passin pass:'+keypassphrase+' -out '+TKF.name
+				else:
+					command = 'openssl rsa -in '+keyfile+' -out '+TKF.name
 				process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)	
 				(out, err) = process.communicate()
 				retcode = process.returncode
