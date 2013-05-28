@@ -1332,8 +1332,12 @@ def postDataToUNIS(key,cert,endpoint,data):
 		msg = "Could not connect to UNIS: %s" % e
 		write_to_log(msg,printtoscreen)
 		return None
-
-	r = conn.getresponse()
+	try:
+		r = conn.getresponse()
+	except Exception as e:
+		msg = "Could not get Connection response from UNIS: %s" % e
+		write_to_log(msg,printtoscreen)
+		return None
 	data = r.read()
 	if r.status not in (200, 201):
 		write_to_log("POST to UNIS at "+url,printtoscreen)

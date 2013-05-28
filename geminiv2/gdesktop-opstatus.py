@@ -132,7 +132,6 @@ except:
 # If passphrase is not provided prompt for it.
 CERT_pkey = gemini_util.getPkey(gemini_util.CERTIFICATE,"certificate")
 (CERT_ISSUER,username) = gemini_util.getCert_issuer_n_username()
-
 if(not (keyfile != '' and os.path.isfile(keyfile))):
 	pKey = CERT_pkey
 else:
