@@ -1450,12 +1450,10 @@ def getPkey(keyfile,filetype,keypassphrase = None):
 					pKey_object = paramiko.RSAKey.from_private_key_file(keyfile)
 					break
 				else:
-					print err+"\nnot a valid RSA private key file. Will not proceed \n"
+					print "\ Nnot a valid RSA private key file. Will not proceed \n"
 					sys.exit(1)
 			else:
-				raise
 				print "\nInvalid Passphrase provided. Please Try Again\n"
-
 				msg1 = 'Do you want to continue (Y / N)? [DEFAULT: Y]  : '
 				user_input = raw_input(msg1)
 				if user_input in ['N','n']:
