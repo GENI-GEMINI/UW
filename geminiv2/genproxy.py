@@ -120,10 +120,10 @@ def make_attribute_cert(icert, ikey, scert, role, outcert, PASSPHRASE):
 
     cmd_attr = CMD_CREATE_ATTR % (icert, ikey, role, creddy_subject_cert, outcert)
     process = subprocess.Popen(cmd_attr, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
-    (out, err) = process.communicate(input=str(PASSPHRASE)+"\n")
+    (out, err) = process.communicate(input=str(PASSPHRASE))
 
     try:
-        check = out.index("Key passphrase:")
+        check = out.index("Enter passphrase for privateKey from file:")
     except ValueError:
         if not len(out) and not len(err):
             pass
