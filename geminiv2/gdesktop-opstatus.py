@@ -100,9 +100,9 @@ for opt, arg in opts:
 		Usage()
 		sys.exit(1)
 	else:
-		mylogbase = gemini_util.getLOGBASE()
+		mylogbase = gemini_util.getLOGBASE(gemini_util.SLICENAME)
 		LOCALTIME = time.strftime("%Y%m%dT%H:%M:%S",time.localtime(time.time()))
-		LOGFILE = mylogbase+"/gdesktop-opstatus-"+gemini_util.SLICENAME+"_"+LOCALTIME+".log"
+		LOGFILE = mylogbase+"/gdesktop-opstatus-"+LOCALTIME+".log"
 		gemini_util.ensure_dir(LOGFILE)
 		gemini_util.openLogPIPE(LOGFILE)
     elif opt in ( "-p", "--passphrasefile" ):
