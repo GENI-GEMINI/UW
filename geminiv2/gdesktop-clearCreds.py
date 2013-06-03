@@ -64,9 +64,9 @@ for opt, arg in opts:
         gemini_util.PASSPHRASEFILE = arg
 
 
-mylogbase = gemini_util.getLOGBASE()
+mylogbase = gemini_util.getLOGBASE(gemini_util.SLICENAME)
 LOCALTIME = time.strftime("%Y%m%dT%H:%M:%S",time.localtime(time.time()))
-LOGFILE = mylogbase+"/gdesktop-clearCreds.log"
+LOGFILE = mylogbase+"/gdesktop-clearCreds-"+LOCALTIME+".log"
 gemini_util.ensure_dir(LOGFILE)
 gemini_util.openLogPIPE(LOGFILE)
 

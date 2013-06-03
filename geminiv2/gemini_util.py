@@ -1563,13 +1563,13 @@ def run_remote(ssh, cmd,pty=False,check_exit_status=True, verbose=True):
 
     return result
 
-def getLOGBASE():
-	LOGBASE = '/var/log/gemini'
+def getLOGBASE(slicename):
+	LOGBASE = '/var/log/gemini/'+slicename
 	try:
 		if not os.path.exists(LOGBASE):
 			os.makedirs(LOGBASE)
 	except OSError:
-		LOGBASE = 'logs'
+		LOGBASE = 'logs/'+slicename
 		print "Using Alternate Log Base"
 	return LOGBASE
 
