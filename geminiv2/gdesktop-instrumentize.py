@@ -461,22 +461,19 @@ if (slice_uuid):
 		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 		gemini_util.DISABLE_ACTIVE = gemini_util.TRUE
 
-	# temporary hack to write out an unencrypted keyfile for the slice registration call to UNIS
-	TEMP_KEYFILE = gemini_util.getUnencryptedKeyfile(CERT_pkey)
-	msg="Registering slice credential with Global UNIS"
-	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-	res1 = gemini_util.postDataToUNIS(TEMP_KEYFILE,gemini_util.CERTIFICATE,"/credentials/genislice",slicecred)
-	os.remove(TEMP_KEYFILE)
+	#Send the proxy cert to UNIS so we can use this identity to query UNIS later
 	f = open(gemini_util.PROXY_ATTR)
-	res2 = gemini_util.postDataToUNIS(gemini_util.PROXY_KEY,gemini_util.PROXY_CERT,"/credentials/geniuser",f)
+	res = gemini_util.postDataToUNIS(gemini_util.PROXY_KEY,gemini_util.PROXY_CERT,"/credentials/geniuser",f)
 	f.close()
 	os.remove(gemini_util.PROXY_ATTR)
-	if res1 or res2 is None:
-		msg="Failed to register slice credential"
+	if res is None:
+		msg="Failed to register instrumentize proxy cert"
 		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 		msg = "Active Services will be disabled to continue with the Instrumentation process"
 		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 		gemini_util.DISABLE_ACTIVE = gemini_util.TRUE
+
+
 else:
         msg = "Could not get slice UUID from slice credential. GEMINI Services may fail."
         gemini_util.write_to_log(msg,gemini_util.printtoscreen)
