@@ -93,14 +93,16 @@ printtoscreen=1
 dontprinttoscreen=0
 SSH_pKey = None
 CERT_pKey = None
-SLICENAME       = ''
+SLICENAME = None
 cache_expiry = 60 * 10 # 10 minutes
 try:
 	HOME            = os.environ["HOME"]
+	CERTIFICATE     = HOME + "/.ssl/encrypted.pem"
+	PASSPHRASEFILE  = HOME + "/.ssl/password"
 except KeyError:
-	HOME 		= '/tmp/'
-CERTIFICATE     = HOME + "/.ssl/encrypted.pem"
-PASSPHRASEFILE  = HOME + "/.ssl/password"
+	HOME 		= None
+	CERTIFICATE     = None
+	PASSPHRASEFILE  = None
 passphrase = ''
 PID = str(os.getpid())
 PROXY_CERT      = None
@@ -1439,9 +1441,9 @@ def getPkey(keyfile,filetype,keypassphrase = None):
 			if(e.message == 'not a valid RSA private key file'):
 				keypassphrase = getPassphraseFromFile()
 				if(keypassphrase == '' or keypassphrase is None):
-					command = 'openssl rsa -in '+keyfile+' -passin pass:'+keypassphrase+' -out '+TKF.name
-				else:
 					command = 'openssl rsa -in '+keyfile+' -out '+TKF.name
+				else:
+					command = 'openssl rsa -in '+keyfile+' -passin pass:'+keypassphrase+' -out '+TKF.name
 				process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)	
 				(out, err) = process.communicate()
 				retcode = process.returncode
@@ -1450,7 +1452,7 @@ def getPkey(keyfile,filetype,keypassphrase = None):
 					pKey_object = paramiko.RSAKey.from_private_key_file(keyfile)
 					break
 				else:
-					print "\ Nnot a valid RSA private key file. Will not proceed \n"
+					print "\n Not a valid RSA private key file. Will not proceed \n"
 					sys.exit(1)
 			else:
 				print "\nInvalid Passphrase provided. Please Try Again\n"

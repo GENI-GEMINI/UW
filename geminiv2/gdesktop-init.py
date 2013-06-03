@@ -135,6 +135,7 @@ except getopt.GetoptError, err:
     sys.exit( 1 )
 
 args = REQARGS
+LOGFILE = None
 
 for opt, arg in opts:
     if opt in ( "-d", "--debug" ):
@@ -154,6 +155,7 @@ for opt, arg in opts:
 	# check if slicename is not empty
 	if(gemini_util.SLICENAME == ''):
 		print "Please provide a slicename"
+		Usage()
 		sys.exit(1)
 	else:
 		mylogbase = gemini_util.getLOGBASE()
@@ -169,6 +171,7 @@ for opt, arg in opts:
 	# check if FILE exists
 	if(not os.path.isfile(FILE)):
 		print "Please provide a Slice/Exp Info File Name. (To be run only by the GENI Desktop)"
+		Usage()
 		sys.exit(1)
 	else:
 		f = open(FILE,'r')
@@ -176,10 +179,16 @@ for opt, arg in opts:
         keyfile = arg
 	if(not (keyfile != '' and os.path.isfile(keyfile))):
 		print "Please provide a valid private key file"
+		Usage()
 		sys.exit(1)
 	else:
 		SSH_pkey = gemini_util.getPkey(keyfile,"SSH key")
 
+if (LOGFILE is None):
+	print "Please provide a slicename"
+	Usage()
+	sys.exit(1)
+	
 try:
 	cf = open(gemini_util.CERTIFICATE,'r')
 except:

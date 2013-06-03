@@ -50,6 +50,7 @@ except getopt.GetoptError, err:
     sys.exit( 1 )
 
 args = REQARGS
+LOGFILE = None
 
 for opt, arg in opts:
     if opt in ( "-d", "--debug" ):
@@ -65,9 +66,15 @@ for opt, arg in opts:
 
 mylogbase = gemini_util.getLOGBASE()
 LOCALTIME = time.strftime("%Y%m%dT%H:%M:%S",time.localtime(time.time()))
-LOGFILE = mylogbase+"/gdesktop-clearCreds-"+gemini_util.SLICENAME+"_"+LOCALTIME+".log"
+LOGFILE = mylogbase+"/gdesktop-clearCreds.log"
 gemini_util.ensure_dir(LOGFILE)
 gemini_util.openLogPIPE(LOGFILE)
+
+if (LOGFILE is None):
+	print "Please provide a slicename"
+	Usage()
+	sys.exit(1)
+	
 
 try:
 	cf = open(gemini_util.CERTIFICATE,'r')
