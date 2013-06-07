@@ -31,8 +31,6 @@ import time
 import datetime
 import tempfile
 import gemini_util	# Import user defined routines
-from lxml import etree
-from unisencoder.decoder import RSpec3Decoder
 
 other_details = ""
 managers = []

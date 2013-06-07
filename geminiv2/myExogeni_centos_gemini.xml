@@ -13,7 +13,7 @@ ExoGENI Rack.
 	xmlns="http://www.geni.net/resources/rspec/3">
   <node client_id="MP-1" component_manager_id="urn:publicid:IDN+exogeni.net:bbnvmsite+authority+am"  exclusive="false" >
     <sliver_type name="m1.large">
-     <disk_image name="http://geni-images.renci.org/images/standard/centos/centos6.3-v1.0.6.xml" version="754834b3d2652cd291a776099e598f05183569f8" /> 
+     <disk_image name="http://stout.incntre.iu.edu/vm/exogeni/centos/centos6.3-v1.0.7-GEMINI.xml" version="edc64ed0e95e5e51261719a87774c786d889eebf" /> 
  </sliver_type>
    <interface client_id="VM-1:if0">
       <ip address="172.16.0.1" netmask="255.255.255.0" />
@@ -24,7 +24,7 @@ ExoGENI Rack.
   </node>
   <node client_id="MP-2" component_manager_id="urn:publicid:IDN+exogeni.net:bbnvmsite+authority+am"  exclusive="false">
     <sliver_type name="m1.large">
-     <disk_image name="http://geni-images.renci.org/images/standard/centos/centos6.3-v1.0.6.xml" version="754834b3d2652cd291a776099e598f05183569f8" /> 
+     <disk_image name="http://stout.incntre.iu.edu/vm/exogeni/centos/centos6.3-v1.0.7-GEMINI.xml" version="edc64ed0e95e5e51261719a87774c786d889eebf" /> 
  </sliver_type>
     <interface client_id="VM-2:if0">
       <ip address="172.16.0.2" netmask="255.255.255.0" />
@@ -35,7 +35,7 @@ ExoGENI Rack.
   </node>
   <node client_id="MP-3" component_manager_id="urn:publicid:IDN+exogeni.net:bbnvmsite+authority+am"  exclusive="false">
     <sliver_type name="m1.large">
-     <disk_image name="http://geni-images.renci.org/images/standard/centos/centos6.3-v1.0.6.xml" version="754834b3d2652cd291a776099e598f05183569f8" /> 
+     <disk_image name="http://stout.incntre.iu.edu/vm/exogeni/centos/centos6.3-v1.0.7-GEMINI.xml" version="edc64ed0e95e5e51261719a87774c786d889eebf" /> 
  </sliver_type>
     <interface client_id="VM-3:if0">
      <ip address="172.16.0.2" netmask="255.255.255.0" />
@@ -46,7 +46,7 @@ ExoGENI Rack.
   </node>
   <node client_id="GN-1" component_manager_id="urn:publicid:IDN+exogeni.net:bbnvmsite+authority+am"  exclusive="false" >
     <sliver_type name="m1.large">
-     <disk_image name="http://geni-images.renci.org/images/standard/centos/centos6.3-v1.0.6.xml" version="754834b3d2652cd291a776099e598f05183569f8" /> 
+     <disk_image name="http://stout.incntre.iu.edu/vm/exogeni/centos/centos6.3-v1.0.7-GEMINI.xml" version="edc64ed0e95e5e51261719a87774c786d889eebf" /> 
  </sliver_type>
   </node>
   <link client_id="lan0">

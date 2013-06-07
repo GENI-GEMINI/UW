@@ -395,7 +395,7 @@ if(not FILE):
 proclist = []
 for my_manager in managers:
 
-	msg =  "Starting instrumentize process for Nodes at ["+my_manager+"] "
+	msg =  "Starting initialization process for Nodes at ["+my_manager+"] "
 	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	pruned_GN_Nodes = gemini_util.pruneNodes(GN_Nodes,my_manager,'GN')
 	if (len(pruned_GN_Nodes) == 0):
