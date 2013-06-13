@@ -1686,7 +1686,7 @@ def workaroud_for_unified_gemini_devel(GN_Node,pKey):
 	cmd0 = "sudo mv /etc/httpd/conf.d/001-main.conf /etc/httpd/conf.d/001-main.conf.save;"
 #	cmd1 = "wget -q -P /tmp/ "+INSTOOLS_repo_url+"patches/apache_config_for_lamp.patch;"
 #	cmd2 = "sudo patch /usr/local/etc/apache2/apache2-lamp-portal /tmp/apache_config_for_lamp.patch;"
-	cmd3 = "sudo /etc/init.d/httpd reload;"
+	cmd3 = "sudo /etc/init.d/httpd restart;"
 	command = cmd0+cmd3
 	
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',command,None,None)
