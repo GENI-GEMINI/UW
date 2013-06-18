@@ -73,6 +73,8 @@ def make_proxy_cert(icert, ikey, pcert, pkey, CN, lifetime, PASSPHRASE):
             for line in f:
                 if (found or "BEGIN CERTIFICATE" in line):
                     found = True
+                    if ("BEGIN RSA PRIVATE KEY" in line):
+                        break
                     d.write(line)
             d.close()
             f.close()
