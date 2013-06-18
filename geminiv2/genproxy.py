@@ -66,15 +66,19 @@ def make_proxy_cert(icert, ikey, pcert, pkey, CN, lifetime, PASSPHRASE):
     process = subprocess.Popen(cmd_proxy, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     (out, err) = process.communicate(input=PASSPHRASE)
 
+    # complete the certificate chain from the user's cert
+    # but make sure to throw away the private key
     try:
         with open(icert) as f:
+            mark = False
             d = open(pcert, 'a')
-            found = False
             for line in f:
-                if (found or "BEGIN CERTIFICATE" in line):
-                    found = True
-                    if ("BEGIN RSA PRIVATE KEY" in line):
-                        break
+                if ("BEGIN RSA PRIVATE KEY" in line):
+                    mark = True
+                if ("END RSA PRIVATE KEY" in line):
+                    mark = False
+                    continue
+                if not mark:
                     d.write(line)
             d.close()
             f.close()
@@ -87,40 +91,10 @@ def make_proxy_cert(icert, ikey, pcert, pkey, CN, lifetime, PASSPHRASE):
 
 def make_attribute_cert(icert, ikey, scert, role, outcert, PASSPHRASE):
 
-    USER_CERT_FILE=tempfile.NamedTemporaryFile(delete=False, suffix=".pem")
-    USER_KEY_FILE=tempfile.NamedTemporaryFile(delete=False, suffix=".pem")
-
     state = True
     msg = None
-    # creddy *wants* subject cert with _ID.pem ending!
-    creddy_subject_cert = scert + "_ID.pem"
-    try:
-        shutil.copyfile(scert, creddy_subject_cert)
-    except Exception as e:
-        print "Could not copy subject cert for creddy!"
-        sys.exit(1)
 
-    # creddy also wants cert and key in separate files...
-    try:
-        with open(icert) as f:
-            line = f.readline()
-            if "BEGIN RSA PRIVATE KEY" in line:
-                USER_KEY_FILE.write(line)
-                for line in f:
-                    USER_KEY_FILE.write(line)
-                    if "END RSA PRIVATE KEY" in line:
-                        USER_KEY_FILE.close()
-                        for line in f:
-                            USER_CERT_FILE.write(line)
-                        USER_CERT_FILE.close()
-                icert = USER_CERT_FILE.name
-                ikey = USER_KEY_FILE.name
-                f.close()
-    except IOError as e:
-        print "Could not open issuer certificate"
-        sys.exit(1)
-
-    cmd_attr = CMD_CREATE_ATTR % (icert, ikey, role, creddy_subject_cert, outcert)
+    cmd_attr = CMD_CREATE_ATTR % (icert, ikey, role, scert, outcert)
     process = subprocess.Popen(cmd_attr, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     (out, err) = process.communicate(input=str(PASSPHRASE))
 
@@ -133,13 +107,6 @@ def make_attribute_cert(icert, ikey, scert, role, outcert, PASSPHRASE):
             msg = "Creddy could not create attribute certificate"
             state = False
 
-    try:
-        os.remove(creddy_subject_cert)
-        os.remove(USER_CERT_FILE.name)
-        os.remove(USER_KEY_FILE.name)
-    except Exception:
-        pass
-        
     return state, msg
 
 def __test():
