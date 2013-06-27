@@ -1374,10 +1374,9 @@ def getUserinfoFromParser(cert,passphrase):
 	return post_return
 
 #Obtain Sliceinfo using cryptic form of user credentials from GeniDesktop Parser
-def getSliceinfoFromParser(user_crypt):
+def getSliceinfoFromParser(user_crypt,sliceurn=''):
 	global debug
-
-	post_data = urllib.urlencode({'user_crypt':user_crypt,'debug':debug})
+	post_data = urllib.urlencode({'user_crypt':user_crypt,'debug':debug,'sliceurn':sliceurn})
 	url = 'https://parser.netlab.uky.edu/getSliceinfo.php'
 	req = urllib2.Request(url,post_data)
 	post_response = urllib2.urlopen(req)
@@ -1702,3 +1701,15 @@ def workaroud_for_unified_gemini_devel(GN_Node,pKey):
 		return FALSE,msg
 	else:
 		return TRUE,""
+
+def getSliceURN(framework,userurn,slicename,project=None):
+	plus = '+'
+	sliceurn = ''
+	(first,authority_string,geni_type,name) = userurn.split('+')
+	if(framework == 'portal'):
+		if(project is not None):
+			sliceurn = first+plus+authority_string+':'+project+plus+'slice'+plus+slicename
+	else:
+		sliceurn = first+plus+authority_string+plus+'slice'+plus+slicename
+
+	return sliceurn	

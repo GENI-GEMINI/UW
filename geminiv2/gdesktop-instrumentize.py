@@ -52,6 +52,7 @@ def Usage():
                                             [default: mytestslice]
     -j file, --loadFromFile=file          read all experiemnt info from File
 							[To be used by GENI Desktop only]
+    -r PROJECT, --project=PROJECT	Name of project. (For use with portal framework.)
     -p file, --passphrase=file          read passphrase from file
                                             [default: ~/.ssl/password]"""
 
@@ -148,9 +149,9 @@ def InstrumentizeProcess(my_manager,pruned_GN_Nodes,pruned_MP_Nodes,q):
 #######################################################
 
 try:
-    opts, REQARGS = getopt.gnu_getopt( sys.argv[ 1: ], "dhxk:f:n:j:p:",
+    opts, REQARGS = getopt.gnu_getopt( sys.argv[ 1: ], "dhxk:f:n:j:p:r:",
                                    [ "debug","help","no_force_refresh","pkey=","certificate=",
-                                     "slicename=","loadFromFile=","devel","passphrase="] )
+                                     "slicename=","loadFromFile=","devel","passphrase=","project="] )
 except getopt.GetoptError, err:
     print >> sys.stderr, str( err )
     Usage()
@@ -158,7 +159,7 @@ except getopt.GetoptError, err:
 
 args = REQARGS
 LOGFILE = None
-
+project = None
 for opt, arg in opts:
     if opt in ( "-d", "--debug" ):
         gemini_util.debug = 1
@@ -167,6 +168,8 @@ for opt, arg in opts:
 	gemini_util.INSTOOLS_repo_url = gemini_util.mc_repo_rooturl+"GEMINI/"+gemini_util.version+"/"
     elif opt in ( "-x","--no_force_refresh" ):
         force_refresh = '0'
+    elif opt in ( "-r", "--project"):
+	project = arg
     elif opt in ( "-f", "--certificatefile" ):
         gemini_util.CERTIFICATE = arg
     elif opt in ( "-h", "--help" ):
@@ -275,6 +278,7 @@ if (UserOBJ['code'] == 0):
 	email_id = UserInfo['email']
 	USERURN = UserInfo['userurn']
 	user_crypt = UserInfo['user_crypt']
+	framework = UserInfo['framework']
 	#CERT_ISSUER = UserInfo['certificate_issuer']
 else:
 	msg = "User not identified : "+ UserOBJ['output']
@@ -283,6 +287,7 @@ else:
 
 msg = "Found User Info for "+USERURN
 gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+my_sliceurn = gemini_util.getSliceURN(framework,USERURN,gemini_util.SLICENAME,project)
 if (FILE):
 	msg = "Fetching Slice Info from the Cache"
 	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
@@ -290,7 +295,7 @@ if (FILE):
 else:
 	msg = "Fetching Slice Info from the GeniDesktop Parser"
 	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-	SliceJSON = gemini_util.getSliceinfoFromParser(user_crypt)
+	SliceJSON = gemini_util.getSliceinfoFromParser(user_crypt,my_sliceurn)
 try:
 	SliceOBJ = json.loads(SliceJSON)
 except ValueError:
