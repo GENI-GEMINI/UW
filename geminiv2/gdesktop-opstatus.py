@@ -32,7 +32,6 @@ other_details = ""
 managers = []
 GN_Nodes = []
 MP_Nodes = []
-debug           = 0
 keyfile = ""
 force_refresh = '1'
 FILE = ''
@@ -72,7 +71,7 @@ def opStatusProcess(Node,queue):
 try:
     opts, REQARGS = getopt.gnu_getopt( sys.argv[ 1: ], "dhxk:f:n:j:p:",
                                    [ "debug","help","no_force_refresh","pkey=","certificate=",
-                                     "slicename=","loadFromFile="
+                                     "slicename=","loadFromFile=",
                                      "passphrase="] )
 except getopt.GetoptError, err:
     print >> sys.stderr, str( err )
