@@ -402,7 +402,6 @@ if (len(GN_Nodes) == 0):
         gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
-
 msg = "Fetching Lamp Certificate and other information from the GeniDesktop Parser"
 gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 LAMPJSON = gemini_util.getLampCert_n_details_FromParser(slice_crypt,user_crypt)
