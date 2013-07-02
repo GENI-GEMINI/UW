@@ -452,6 +452,7 @@ def precheckNodes(GN_Node,MP_Nodes,pKey):
 		return FALSE,msg
 	if (not isOSSupported(GN_Node,pKey)):
 		msg = "The Operating System on the Node \""+vid+"\" is not compatible with GEMINI"
+		set_unset_LOCK(GN_Node,"OS_NOT_SUPPORTED on "+vid+"/"+hostname+":"+port,pKey)
 		return FALSE,msg
 	msg = "Node : \""+vid+"\" passed pre-check test"
 	write_to_log(msg,printtoscreen)
@@ -481,6 +482,7 @@ def precheckNodes(GN_Node,MP_Nodes,pKey):
 
 		if (not isOSSupported(Node,pKey)):
 			msg = "The Operating System on the Node \""+vid+"\" is not compatible with GEMINI"
+			set_unset_LOCK(GN_Node,"OS_NOT_SUPPORTED on "+vid+"/"+hostname+":"+port,pKey)
 			return FALSE,msg
 		msg = "Node : \""+vid+"\" passed pre-check test"
 		write_to_log(msg,printtoscreen)
@@ -979,8 +981,8 @@ def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,SLICEUUID,UNIS
 	GNHOST = GN_Node['hostname']
 	UNIS_ID = findUNISNodeID(UNISTopo,GN_Node)
 	if UNIS_ID is None:
-		msg = "Could not find matching UNIS node for %s" % GN_Node["name"]
-		write_to_log(msg,printoscreen)
+		msg = "Could not find matching UNIS node for %s" % GN_Node["hostname"]
+		write_to_log(msg,printtoscreen)
 
 	#Install software on GN Node regardless
 	NODE_TYPE = "GN"
@@ -997,8 +999,8 @@ def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,SLICEUUID,UNIS
 		NODE_TYPE = "MP"
 		UNIS_ID = findUNISNodeID(UNISTopo,Node)
 		if UNIS_ID is None:
-			msg = "Could not find matching UNIS node for %s" % Node["name"]
-			write_to_log(msg,printoscreen)
+			msg = "Could not find matching UNIS node for %s" % Node["hostname"]
+			write_to_log(msg,printtoscreen)
 
 		cmd = "cd "+EXP_NODE_tmppath+";sudo rm -rf ACTIVE_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/ACTIVE_SETUP.tgz;tar xzf ACTIVE_SETUP.tgz;sudo ./ACTIVE_SETUP.sh "+NODE_TYPE+" INSTALL "+SLICEURN+" "+USERURN+" "+GNHOST+" "+SLICEUUID+" "+UNIS_ID
 		#Install software on MP Nodes
@@ -1231,8 +1233,8 @@ def createBlippServiceEntries(MP_Nodes,GN_Node,UNISTopo,slice_uuid):
 	for node in MP_Nodes:
 		UNIS_ID = findUNISNodeID(UNISTopo,node)
 		if UNIS_ID is None:
-			msg = "Could not find matching UNIS node for %s" % node["name"]
-			write_to_log(msg,printoscreen)
+			msg = "Could not find matching UNIS node for %s" % node["hostname"]
+			write_to_log(msg,printtoscreen)
 			continue
 
 		post_desc = service_desc
@@ -1713,3 +1715,23 @@ def getSliceURN(framework,userurn,slicename,project=None):
 		sliceurn = first+plus+authority_string+plus+'slice'+plus+slicename
 
 	return sliceurn	
+
+def getStateSummary(items):
+	if(all(x == items[0] for x in items)):
+		if(items[0] == 'NEW'):
+			return 'NEW'
+		elif(items[0] == 'INITIALIZATION_IN_PROGRESS'):
+			return 'INITIALIZING'
+		elif(items[0] == 'INITIALIZATION_COMPLETE'):
+			return 'INITIALIZED'
+		elif(items[0] == 'INSTALLATION_IN_PROGRESS'):
+			return 'INSTRUMENTIZING'
+		elif(items[0] == 'INSTALLATION_COMPLETE'):
+			return 'INSTRUMENTIZING'
+		elif(items[0] == 'INSTRUMENTIZE_IN_PROGRESS'):
+			return 'INSTRUMENTIZING'
+		elif(items[0] == 'INSTRUMENTIZE_COMPLETE'):
+			return 'INSTRUMENTIZED'
+
+	else:
+		return "MIXED"

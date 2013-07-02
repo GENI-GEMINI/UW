@@ -30,6 +30,7 @@ import gemini_util	# Import user defined routines
 
 other_details = ""
 managers = []
+jsonresult = {}
 GN_Nodes = []
 MP_Nodes = []
 keyfile = ""
@@ -59,14 +60,20 @@ def opStatusProcess(Node,queue):
 
 	(init_status,ret_code,err_msg) = gemini_util.getLockStatus(Node,pKey)
 	if(ret_code == -1 ):
-		msg = "ERROR: "+err_msg
+		msg = "SSH_ERROR - "+err_msg
        		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+		queue.put(msg)
 		sys.exit(1)
 
 	if(init_status == ""):
-		init_status = "NOT_INITIALIZED"
+		init_status = "NEW"
+	elif(not init_status.startswith('IN')):
+       		gemini_util.write_to_log(init_status,gemini_util.printtoscreen)
+		queue.put(init_status)
+		sys.exit(1)
+		
 
-	queue.put([Node['sliver_id'],init_status])
+	queue.put([Node['nodeid'],init_status])
 	return  
 
 try:
@@ -89,7 +96,6 @@ for opt, arg in opts:
         force_refresh = '0'
     elif opt in ( "-r", "--project"):
 	project = arg
-	print project
     elif opt in ( "-f", "--certificatefile" ):
         gemini_util.CERTIFICATE = arg
     elif opt in ( "-h", "--help" ):
@@ -269,7 +275,10 @@ gemini_util.write_to_log(NodesJSON,gemini_util.dontprinttoscreen)
 if(NodesOBJ['code'] != 0):
 	msg = NodesOBJ['output']+": No Manifest Available for : "+ SliceInfo['sliceurn']
         gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-	sys.exit(1)
+	jsonresult["status"] = "ERROR"
+	jsonresult["details"] = "NO MANIFEST PRESENT"
+	print json.dumps(jsonresult)
+	sys.exit(0)
 
 Nodes = NodesOBJ['output']
 for Node in Nodes:
@@ -320,33 +329,46 @@ if(not FILE):
 	f.close
 
 
+details = {}
+result = {}
+
 if (len(GN_Nodes) == 0):
 	msg = "No GN Nodes Present. Will not proceed"
         gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-	sys.exit(1)
+	jsonresult["status"] = "ERROR"
+	jsonresult["details"] = "NO GLOBAL NODE PRESENT"
+else:
+	proclist = []
+	results = []
+	for Node in GN_Nodes:
 
-status = {}
-proclist = []
-results = []
-for Node in GN_Nodes:
-
-	result_queue = multiprocessing.Queue()
-	p = multiprocessing.Process(target=opStatusProcess,args=(Node,result_queue,))
-	proclist.append(p)
-	p.start()                                                                                                                      
-	results.append(result_queue)
-
-for i in proclist:
-	i.join()
-	if(i.exitcode != 0):
-		sys.exit(i.exitcode)
-
-for result in results:
-	if(not result.empty()):
-		l = result.get()
-		status[l[0]] = l[1]
-
-gemini_util.closeLogPIPE(LOGFILE)
-print json.dumps(status)
-
+		result_queue = multiprocessing.Queue()
+		p = multiprocessing.Process(target=opStatusProcess,args=(Node,result_queue,))
+		proclist.append(p)
+		p.start()                                                                                                                      
+		results.append(result_queue)
+	myexitcode = 0
+	for i in proclist:
+		i.join()
+		if(i.exitcode != 0):
+			myexitcode = i.exitcode
+	mystates = []
+	for result in results:
+		if(not result.empty()):
+			l = result.get()
+			if ((type(l) is str) or (type(l) is unicode)):
+				jsonresult['details'] = l
+				break
+			else:
+				sliver_id  = l[0]
+				status = l[1]
+				mystates.append(status)
+				details[sliver_id] = status
+				jsonresult['details'] = details
+	if (myexitcode != 0 ): 
+		jsonresult["status"] = "ERROR"
+	else:
+		jsonresult['status'] = gemini_util.getStateSummary(mystates)
+	gemini_util.closeLogPIPE(LOGFILE)
+print json.dumps(jsonresult)
 
