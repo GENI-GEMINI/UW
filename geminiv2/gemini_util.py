@@ -1718,8 +1718,8 @@ def getSliceURN(framework,userurn,slicename,project=None):
 
 def getStateSummary(items):
 	if(all(x == items[0] for x in items)):
-		if(items[0] == 'NEW'):
-			return 'NEW'
+		if(items[0] == 'CREATED'):
+			return 'CREATED'
 		elif(items[0] == 'INITIALIZATION_IN_PROGRESS'):
 			return 'INITIALIZING'
 		elif(items[0] == 'INITIALIZATION_COMPLETE'):

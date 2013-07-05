@@ -66,7 +66,7 @@ def opStatusProcess(Node,queue):
 		sys.exit(1)
 
 	if(init_status == ""):
-		init_status = "NEW"
+		init_status = "CREATED"
 	elif(not init_status.startswith('IN')):
        		gemini_util.write_to_log(init_status,gemini_util.printtoscreen)
 		queue.put(init_status)
@@ -275,8 +275,8 @@ gemini_util.write_to_log(NodesJSON,gemini_util.dontprinttoscreen)
 if(NodesOBJ['code'] != 0):
 	msg = NodesOBJ['output']+": No Manifest Available for : "+ SliceInfo['sliceurn']
         gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-	jsonresult["status"] = "ERROR"
-	jsonresult["details"] = "NO MANIFEST PRESENT"
+	jsonresult["status"] = "CREATED"
+	jsonresult["details"] = "No Resources Present"
 	print json.dumps(jsonresult)
 	sys.exit(0)
 
@@ -335,8 +335,8 @@ result = {}
 if (len(GN_Nodes) == 0):
 	msg = "No GN Nodes Present. Will not proceed"
         gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-	jsonresult["status"] = "ERROR"
-	jsonresult["details"] = "NO GLOBAL NODE PRESENT"
+	jsonresult["status"] = "CREATED"
+	jsonresult["details"] = "Has Resources but no Global Node"
 else:
 	proclist = []
 	results = []
