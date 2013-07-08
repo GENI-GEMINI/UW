@@ -1709,7 +1709,7 @@ def getSliceURN(framework,userurn,slicename,project=None):
 	sliceurn = ''
 	(first,authority_string,geni_type,name) = userurn.split('+')
 	if(framework == 'portal'):
-		if(project is not None):
+		if(project is not None and project != ''):
 			sliceurn = first+plus+authority_string+':'+project+plus+'slice'+plus+slicename
 	else:
 		sliceurn = first+plus+authority_string+plus+'slice'+plus+slicename
