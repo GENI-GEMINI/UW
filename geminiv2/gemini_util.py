@@ -487,7 +487,7 @@ def precheckNodes(GN_Node,MP_Nodes,pKey):
 		msg = "Node : \""+vid+"\" passed pre-check test"
 		write_to_log(msg,printtoscreen)
 
-	
+	detailedProbeComplete(GN_Node,pKey)	
 	return TRUE,msg
 
 #
@@ -1735,3 +1735,51 @@ def getStateSummary(items):
 
 	else:
 		return "MIXED"
+
+def isdetailedProbeRequired(Node,pKey):
+
+	DETAILED_PROBE_COMPLETED = '/var/emulab/lock/DETAILED_PROBE_COMPLETED'
+
+	hostname = Node['login_hostname']
+	port = Node['login_port']
+	username = Node['login_username']
+	vid = Node['nodeid']
+
+	SUDO = 'sudo '
+	if(isRoot(username)):
+		SUDO = ''
+
+	cmd = SUDO+'ls '+DETAILED_PROBE_COMPLETED
+
+	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
+	write_to_processlog(out_ssh,err_ssh)
+   	if(ret_code == 0):
+	   return False
+	else:
+	   return True
+
+	return False
+
+def detailedProbeComplete(Node,pKey):
+
+	DETAILED_PROBE_COMPLETED = '/var/emulab/lock/DETAILED_PROBE_COMPLETED'
+
+	hostname = Node['login_hostname']
+	port = Node['login_port']
+	username = Node['login_username']
+	vid = Node['nodeid']
+
+	SUDO = 'sudo '
+	if(isRoot(username)):
+		SUDO = ''
+
+	cmd = SUDO+'touch '+DETAILED_PROBE_COMPLETED
+
+	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
+	write_to_processlog(out_ssh,err_ssh)
+   	if(ret_code == 0):
+	   return True
+	else:
+	   return False
+
+	return True
