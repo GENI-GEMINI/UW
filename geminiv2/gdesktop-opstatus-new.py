@@ -89,7 +89,7 @@ def opStatusProcess(GN_Node,MP_Nodes,queue):
 try:
     opts, REQARGS = getopt.gnu_getopt( sys.argv[ 1: ], "dhxk:f:n:j:p:r:",
                                    [ "debug","help","no_force_refresh","pkey=","certificate=",
-                                     "slicename=","loadFromFile=","devel=",
+                                     "slicename=","loadFromFile=","devel",
                                      "passphrase=","project="] )
 except getopt.GetoptError, err:
     print >> sys.stderr, str( err )
