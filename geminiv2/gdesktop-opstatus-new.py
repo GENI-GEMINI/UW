@@ -42,6 +42,7 @@ def Usage():
         print "usage: " + sys.argv[ 0 ] + " [option...]"
         print """Options:
     -d, --debug                         be verbose about XML methods invoked
+    --devel	                        Use Devel version [only for developers]
     -x, --no_force_refresh                  Do not force parser to get fresh manifests from AMs
     -k, --pkey=file			Private SSH RSA Key file
     -f file, --certificate=file         read SSL certificate from file
@@ -88,7 +89,7 @@ def opStatusProcess(GN_Node,MP_Nodes,queue):
 try:
     opts, REQARGS = getopt.gnu_getopt( sys.argv[ 1: ], "dhxk:f:n:j:p:r:",
                                    [ "debug","help","no_force_refresh","pkey=","certificate=",
-                                     "slicename=","loadFromFile=",
+                                     "slicename=","loadFromFile=","devel=",
                                      "passphrase=","project="] )
 except getopt.GetoptError, err:
     print >> sys.stderr, str( err )
@@ -101,6 +102,9 @@ project = None
 for opt, arg in opts:
     if opt in ( "-d", "--debug" ):
         gemini_util.debug = 1
+    elif opt in ( "--devel" ):
+        gemini_util.version = gemini_util.devel_version
+	gemini_util.INSTOOLS_repo_url = gemini_util.mc_repo_rooturl+"GEMINI/"+gemini_util.version+"/"
     elif opt in ( "-x","--no_force_refresh" ):
         force_refresh = '0'
     elif opt in ( "-r", "--project"):
