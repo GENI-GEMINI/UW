@@ -54,17 +54,14 @@ def Usage():
     -h, --help                          show options and usage
     -n name, --slicename=name           specify human-readable name of slice
                                             [default: mytestslice]
-    -j file, --loadFromFile=file          read all experiemnt info from File
-							[To be used by GENI Desktop only]
     -r PROJECT, --project=PROJECT	Name of project. (For use with portal framework.)
     -p file, --passphrase=file          read passphrase from file
                                             [default: ~/.ssl/password]"""
 
 try:
-    opts, REQARGS = getopt.gnu_getopt( sys.argv[ 1: ], "dhxk:f:n:j:p:r:",
+    opts, REQARGS = getopt.gnu_getopt( sys.argv[ 1: ], "dhxk:f:n:p:r:",
                                    [ "debug","help","no_force_refresh","pkey=","certificate=",
-                                     "slicename=","loadFromFile=",
-                                     "passphrase=","project="] )
+                                     "slicename=","passphrase=","project="] )
 except getopt.GetoptError, err:
     print >> sys.stderr, str( err )
     Usage()
@@ -79,36 +76,27 @@ for opt, arg in opts:
     elif opt in ( "-x","--no_force_refresh" ):
         force_refresh = '0'
     elif opt in ( "-r", "--project"):
-	project = arg
+		project = arg
     elif opt in ( "-f", "--certificatefile" ):
         gemini_util.CERTIFICATE = arg
     elif opt in ( "-h", "--help" ):
         Usage()
         sys.exit( 0 )
     elif opt in ( "-n", "--slicename" ):
-        gemini_util.SLICENAME = arg
-	# check if slicename is not empty
-	if(gemini_util.SLICENAME == ''):
-		print "Please provide a slicename"
-		Usage()
-		sys.exit(1)
-	else:
-		mylogbase = gemini_util.getLOGBASE(gemini_util.SLICENAME)
-		LOCALTIME = time.strftime("%Y%m%dT%H:%M:%S",time.localtime(time.time()))
-		LOGFILE = mylogbase+"/gdesktop-instrumentize-"+LOCALTIME+".log"
-		gemini_util.ensure_dir(LOGFILE)
-		gemini_util.openLogPIPE(LOGFILE)
+		gemini_util.SLICENAME = arg
+		# check if slicename is not empty
+		if(gemini_util.SLICENAME == ''):
+			print "Please provide a slicename"
+			Usage()
+			sys.exit(1)
+		else:
+			mylogbase = gemini_util.getLOGBASE(gemini_util.SLICENAME)
+			LOCALTIME = time.strftime("%Y%m%dT%H:%M:%S",time.localtime(time.time()))
+			LOGFILE = mylogbase+"/gdesktop-instrumentize-"+LOCALTIME+".log"
+			gemini_util.ensure_dir(LOGFILE)
+			gemini_util.openLogPIPE(LOGFILE)
     elif opt in ( "-p", "--passphrasefile" ):
         gemini_util.PASSPHRASEFILE = arg
-    elif opt in ( "-j", "--loadFromFile" ):
-        FILE = arg
-	# check if FILE exists
-	if(not os.path.isfile(FILE)):
-		print "Please provide a Slice/Exp Info File Name. (To be run only by the GENI Desktop)"
-		Usage()
-		sys.exit(1)
-	else:
-		f = open(FILE,'r')
     elif opt in ( "-k", "--pkey" ):
         keyfile = arg
 	if(not (keyfile != '' and os.path.isfile(keyfile))):
@@ -140,90 +128,15 @@ if(not (keyfile != '' and os.path.isfile(keyfile))):
 else:
 	pKey = SSH_pkey
 
-if(not FILE):
-	#loading cache file
-	FILE = gemini_util.getCacheFilename(CERT_ISSUER,username,gemini_util.SLICENAME)
-	if(not os.path.isfile(FILE)):
-		FILE = ''
-	elif((time.time() - os.stat(FILE)[8] ) > gemini_util.cache_expiry): # Assumes that if cache file is older than 15 minutes dont use it.
-		msg = "Cache is empty or invalid :EXPIRED "+str(time.time() - os.stat(FILE)[8] - gemini_util.cache_expiry )+' seconds ago'
-		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-		FILE = ''
-	else:
-		f = open(FILE,'r')
-
-# The FILE variable is pretty tricky
-# Check if user provides the JSON FIle
-# next resort look for JSON from cache in /tmp/
-# If all else fails fetch from parser.
-
-
-if (FILE):
-	msg = "Fetching User Info from the Cache"
-	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-	UserJSON = f.readline()
-else:
-	msg = "Fetching User Info from the GeniDesktop Parser"
-	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-	UserJSON = gemini_util.getUserinfoFromParser(cf.read(),gemini_util.passphrase)
+(UserInfo,Slices,Nodes) = gemini_util.getMyExpInfo(CERT_ISSUER,username,cf.read(),project,force_refresh)
 cf.close()
-try:
-	UserOBJ = json.loads(UserJSON)
-	gemini_util.write_to_log(UserJSON,gemini_util.dontprinttoscreen)
-except ValueError:
-	if(FILE):
-		#This assumes that the info in the cache is corrupted remove the cache and exit 
-		# So the next time its called again, fresh info from the parser is pulled
-		os.unlink(FILE)
+username = UserInfo['uid']
+email_id = UserInfo['email']
+USERURN = UserInfo['userurn']
+user_crypt = UserInfo['user_crypt']
+framework = UserInfo['framework']
+user_public_key = UserInfo['public_key']
 	
-	msg ="User JSON Loading Error"
-	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-	sys.exit(1)
-
-if (UserOBJ['code'] == 0):
-	UserInfo = UserOBJ['output']
-	username = UserInfo['uid']
-	email_id = UserInfo['email']
-	USERURN = UserInfo['userurn']
-	user_crypt = UserInfo['user_crypt']
-	framework = UserInfo['framework']
-	#CERT_ISSUER = UserInfo['certificate_issuer']
-else:
-	msg = "User not identified : "+ UserOBJ['output']
-        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-	sys.exit(1)
-
-msg = "Found User Info for "+USERURN
-gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-my_sliceurn = gemini_util.getSliceURN(framework,USERURN,gemini_util.SLICENAME,project)
-if (FILE):
-	msg = "Fetching Slice Info from the Cache"
-	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-	SliceJSON = f.readline()
-else:
-	msg = "Fetching Slice Info from the GeniDesktop Parser"
-	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-	SliceJSON = gemini_util.getSliceinfoFromParser(user_crypt,my_sliceurn)
-try:
-	SliceOBJ = json.loads(SliceJSON)
-except ValueError:
-	if(FILE):
-		#This assumes that the info in the cache is corrupted remove the cache and exit 
-		# So the next time its called again, fresh info from the parser is pulled
-		os.unlink(FILE)
-		
-	msg ="Slice JSON Loading Error"
-	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-	sys.exit(1)
-
-gemini_util.write_to_log(SliceJSON,gemini_util.dontprinttoscreen)
-found = gemini_util.FALSE
-if (SliceOBJ['code'] != 0):
-	msg = "User/Slice not identified : "+ SliceOBJ['output']
-        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-	sys.exit(1)
-
-Slices = SliceOBJ['output']
 for  SliceInfo in Slices:
 	(junk,slicename_from_parser) = SliceInfo['sliceurn'].rsplit('+',1)
 	if (gemini_util.SLICENAME == slicename_from_parser):
@@ -233,41 +146,19 @@ for  SliceInfo in Slices:
 
 if(not found):
 	msg = "Slice : "+gemini_util.SLICENAME+' does not exists'
-        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
 msg = "Found Slice Info for "+SLICEURN
 gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 slice_crypt = SliceInfo['crypt']
-api = "getNodeInfo"
-if(FILE):
-	msg = "Fetching Manifest Info from the Cache"
-	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-	NodesJSON= f.readline()
-else:
-	msg = "Fetching Manifest Info from the GeniDesktop Parser"
-	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-	NodesJSON = gemini_util.getJSONManifestFromParser(slice_crypt,gemini_util.SLICENAME,api,force_refresh)
-try:
-	NodesOBJ = json.loads(NodesJSON)
-	gemini_util.write_to_log(NodesJSON,gemini_util.dontprinttoscreen)
-except ValueError:
-	if(FILE):
-		#This assumes that the info in the cache is corrupted remove the cache and exit 
-		# So the next time its called again, fresh info from the parser is pulled
-		os.unlink(FILE)
-	
-	msg ="Nodes JSON Loading Error"
+
+if(isinstance(Nodes, basestring)):
+	msg = Nodes+": No Manifest Available for : "+ SliceInfo['sliceurn']
 	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
-if(NodesOBJ['code'] != 0):
-	msg = NodesOBJ['output']+": No Manifest Available for : "+ SliceInfo['sliceurn']
-        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-	sys.exit(1)
 
-
-Nodes = NodesOBJ['output']
 for Node in Nodes:
 	nodeid = Node['nodeid']
 	hostname = Node['hostname']
@@ -318,11 +209,6 @@ try:
 	LAMPOBJ = json.loads(LAMPJSON)
 	gemini_util.write_to_log(LAMPJSON,gemini_util.dontprinttoscreen)
 except ValueError:
-	if(FILE):
-		#This assumes that the info in the cache is corrupted remove the cache and exit 
-		# So the next time its called again, fresh info from the parser is pulled
-		os.unlink(FILE)
-	
 	msg ="LAMP Info JSON Loading Error"
 	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
@@ -339,19 +225,9 @@ if (LAMPOBJ['code'] == 0):
 	LAMPCERT = LampInfo['lampcert']
 else:
 	msg = "Error obtaining Lamp Info : "+ LAMPOBJ['output']
-        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
-if(not FILE):
-	# Save all jsons to cache
-	cachefilename = gemini_util.getCacheFilename(CERT_ISSUER,username,gemini_util.SLICENAME)
-	gemini_util.ensure_dir(cachefilename)
-	f = open(cachefilename, 'w')
-	f.write(UserJSON.strip()+"\n")
-	f.write(SliceJSON.strip()+"\n")
-	f.write(NodesJSON.strip())
-	f.close
-	
 if(LAMPCERT == ''):
 	msg = "Lamp Certificate was Not Found. Some services may not work correctly"
 	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
@@ -392,8 +268,8 @@ if (slice_uuid):
 		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 		gemini_util.DISABLE_ACTIVE = gemini_util.TRUE
 else:
-        msg = "Could not get slice UUID from slice credential. GEMINI Services may fail."
-        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+	msg = "Could not get slice UUID from slice credential. GEMINI Services may fail."
+	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
 gn_ms_proxycert_file = None

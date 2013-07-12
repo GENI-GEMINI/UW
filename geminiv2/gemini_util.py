@@ -1595,8 +1595,8 @@ def getCert_issuer_n_username():
 	(junk,domain,type,username) = USER_URN.split('+')
 	return (domain.replace('.','_')).replace(':','_'),username
 	
-def getCacheFilename(CERT_ISSUER,username,SLICENAME):
-	return '/tmp/.gemini/'+CERT_ISSUER+'-'+username+'-'+SLICENAME+'.json'
+def getCacheFilename(CERT_ISSUER,username,SLICENAME,api_call):
+	return '/tmp/.gemini/'+CERT_ISSUER+'-'+username+'-'+api_call+'-'+SLICENAME+'.json'
 
 #
 # Modified version of do_method from Utah 
@@ -1783,3 +1783,160 @@ def detailedProbeComplete(Node,pKey):
 	   return False
 
 	return True
+
+def fetchFromCache(CERT_ISSUER,username,api_call):
+	global SLICENAME
+	global cache_expiry
+
+	if(api_call == 'getuserinfo'):
+		FILE = getCacheFilename(CERT_ISSUER,username,'',api_call)
+	else:	
+		FILE = getCacheFilename(CERT_ISSUER,username,SLICENAME,api_call)
+	if(not os.path.isfile(FILE)):
+		return ''
+	elif((time.time() - os.stat(FILE)[8] ) > cache_expiry): # Assumes that if cache file is older than 15 minutes dont use it.
+		msg = "Cache for "+api_call+" is empty or invalid :EXPIRED "+str(time.time() - os.stat(FILE)[8]  - cache_expiry )+' seconds ago'
+		write_to_log(msg,printtoscreen)
+		return ''
+
+	else:
+		f = open(FILE,'r')
+		return (f.readline()).strip()
+
+def writeToCache(CERT_ISSUER,username,api_call,json):
+	global SLICENAME
+	if(api_call == 'getuserinfo'):
+		FILE = getCacheFilename(CERT_ISSUER,username,'',api_call)
+	else:	
+		FILE = getCacheFilename(CERT_ISSUER,username,SLICENAME,api_call)
+	ensure_dir(FILE)
+	f = open(FILE, 'w')
+	f.write(json)
+	f.close()
+
+	return
+
+
+def getMyExpInfo(CERT_ISSUER,username,cert_string,project,force_refresh):
+	global SLICENAME
+	global passphrase
+
+	UserJSON = ''
+	cachedUserJSON = fetchFromCache(CERT_ISSUER,username,"getuserinfo")
+	if (cachedUserJSON != ''):
+		msg = "Fetching User Info from the Cache"
+		write_to_log(msg,printtoscreen)
+		UserJSON = cachedUserJSON
+	else:
+		msg = "Fetching User Info from the GeniDesktop Parser"
+		write_to_log(msg,printtoscreen)
+		UserJSON = getUserinfoFromParser(cert_string,passphrase)
+	try:
+		UserOBJ = json.loads(UserJSON)
+		if (cachedUserJSON == ''):
+			writeToCache(CERT_ISSUER,username,'getuserinfo',UserJSON.strip())
+	except ValueError:
+		#This assumes that the info in the cache is corrupted  
+		# SO we clear the cache
+		# So the next time the info is pulled from the parser
+		writeToCache(CERT_ISSUER,username,'getuserinfo','')
+		msg ="User JSON Loading Error"
+		write_to_log(msg,printtoscreen)
+		sys.exit(1)
+
+	write_to_log(UserJSON,dontprinttoscreen)
+	if (UserOBJ['code'] == 0):
+		UserInfo = UserOBJ['output']
+		username = UserInfo['uid']
+		email_id = UserInfo['email']
+		USERURN = UserInfo['userurn']
+		user_crypt = UserInfo['user_crypt']
+		user_public_key = UserInfo['public_key']
+		framework = UserInfo['framework']
+	else:
+		msg = "User not identified : "+ UserOBJ['output']
+		write_to_log(msg,printtoscreen)
+		sys.exit(1)
+
+	msg = "Found User Info for "+USERURN
+	write_to_log(msg,printtoscreen)
+
+
+	my_sliceurn = getSliceURN(framework,USERURN,SLICENAME,project)
+	cachedSliceJSON = fetchFromCache(CERT_ISSUER,username,"getsliceinfo")
+	SliceJSON = ''
+	if (cachedSliceJSON != ''):
+		msg = "Fetching Slice Info from the Cache"
+		write_to_log(msg,printtoscreen)
+		SliceJSON = cachedSliceJSON
+	else:
+		msg = "Fetching Slice Info from the GeniDesktop Parser"
+		write_to_log(msg,printtoscreen)
+		SliceJSON = getSliceinfoFromParser(user_crypt,my_sliceurn)
+	try:
+		SliceOBJ = json.loads(SliceJSON)
+		if(cachedSliceJSON == ''):
+			writeToCache(CERT_ISSUER,username,'getsliceinfo',SliceJSON.strip())
+	except ValueError:
+		#This assumes that the info in the cache is corrupted  
+		# SO we clear the cache
+		# So the next time the info is pulled from the parser
+		writeToCache(CERT_ISSUER,username,'getsliceinfo','')
+		msg ="Slice JSON Loading Error"
+		write_to_log(msg,printtoscreen)
+		sys.exit(1)
+
+	write_to_log(SliceJSON,dontprinttoscreen)
+	found = FALSE
+	if (SliceOBJ['code'] != 0):
+		msg = "User/Slice not identified : "+ SliceOBJ['output']
+		write_to_log(msg,printtoscreen)
+		sys.exit(1)
+
+	Slices = SliceOBJ['output']
+	for  SliceInfo in Slices:
+		(junk,slicename_from_parser) = SliceInfo['sliceurn'].rsplit('+',1)
+		if (SLICENAME == slicename_from_parser):
+			SLICEURN =  SliceInfo['sliceurn']
+			found = TRUE
+			break
+
+	if(not found):
+		msg = "Slice : "+SLICENAME+' does not exists'
+		write_to_log(msg,printtoscreen)
+		sys.exit(1)
+
+	msg = "Found Slice Info for "+SLICEURN
+	write_to_log(msg,printtoscreen)
+	slice_crypt = SliceInfo['crypt']
+	api = "getNodeInfo"
+	cachedNodesJSON = fetchFromCache(CERT_ISSUER,username,"nodeinfo")
+	NodesJSON = ''
+	if(cachedNodesJSON != ''):
+		msg = "Fetching Manifest Info from the Cache"
+		write_to_log(msg,printtoscreen)
+		NodesJSON = cachedNodesJSON
+	else:
+		msg = "Fetching Manifest Info from the GeniDesktop Parser"
+		write_to_log(msg,printtoscreen)
+		NodesJSON = getJSONManifestFromParser(slice_crypt,SLICENAME,api,force_refresh)
+	try:
+		NodesOBJ = json.loads(NodesJSON.strip())
+		if(cachedNodesJSON == ''):
+			writeToCache(CERT_ISSUER,username,'nodeinfo',NodesJSON.strip())
+	except ValueError:
+		#This assumes that the info in the cache is corrupted  
+		# SO we clear the cache
+		# So the next time the info is pulled from the parser
+		writeToCache(CERT_ISSUER,username,'nodeinfo','')
+		msg ="Nodes JSON Loading Error"
+		write_to_log(msg,printtoscreen)
+		sys.exit(1)
+
+	write_to_log(NodesJSON,dontprinttoscreen)
+	if(NodesOBJ['code'] != 0):
+		#msg = NodesOBJ['output']+": No Manifest Available for : "+ SliceInfo['sliceurn']
+		#write_to_log(msg,printtoscreen)
+		writeToCache(CERT_ISSUER,username,'nodeinfo','')
+
+	return (UserOBJ['output'],SliceOBJ['output'],NodesOBJ['output'])

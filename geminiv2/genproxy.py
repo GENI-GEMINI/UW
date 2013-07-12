@@ -38,7 +38,7 @@ openssl x509 -passin stdin -req -CAcreateserial -in %s -days %d -out %s -CA %s -
 '''
 
 CMD_CREATE_ATTR = '''
-cd /tmp/; creddy --attribute --issuer %s --key %s --role %s --subject-cert %s --out %s
+creddy --attribute --issuer %s --key %s --role %s --subject-cert %s --out %s
 '''
 
 def make_proxy_cert(icert, ikey, pcert, pkey, CN, lifetime, PASSPHRASE):
