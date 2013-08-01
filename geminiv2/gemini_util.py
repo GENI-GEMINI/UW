@@ -1094,7 +1094,7 @@ def generate_all_proxycerts(lifetime,auth_uuid):
         irods_proxykey_file = f2.name
 
 	write_to_log("Generating proxy certificate for Irods service",printtoscreen)
-	genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,irods_proxycert_file,irods_proxykey_file,"irods",lifetime,passphrase)
+	genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,irods_proxycert_file,irods_proxykey_file,"",lifetime,passphrase)
 	f2.seek(0)
 	f1.seek(0,2)
 	f1.write("\n"+f2.read())
@@ -1711,6 +1711,10 @@ def getSliceURN(framework,userurn,slicename,project=None):
 	if(framework == 'portal'):
 		if(project is not None and project != ''):
 			sliceurn = first+plus+authority_string+':'+project+plus+'slice'+plus+slicename
+		else:
+			msg =  "Missing Project Name"
+			print msg
+			sys.exit(1)
 	else:
 		sliceurn = first+plus+authority_string+plus+'slice'+plus+slicename
 
