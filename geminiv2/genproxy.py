@@ -42,6 +42,7 @@ creddy --attribute --issuer %s --key %s --role %s --subject-cert %s --out %s
 '''
 
 def make_proxy_cert(icert, ikey, pcert, pkey, CN, lifetime, PASSPHRASE):
+    global CMD_CERT_REQUEST
     TEMP_REQFILE = tempfile.NamedTemporaryFile(delete=True)
 
     try:
@@ -58,7 +59,11 @@ def make_proxy_cert(icert, ikey, pcert, pkey, CN, lifetime, PASSPHRASE):
     (out, err) = process.communicate()
     issuer_subject = out.split("subject= ")[1].strip('\n')
 
-    cmd_req = CMD_CERT_REQUEST % (CSRCONF_FILENAME, pkey, TEMP_REQFILE.name, issuer_subject, CN)
+    if(CN == '' or CN == '12345678'):
+	CMD_CERT_REQUEST = CMD_CERT_REQUEST.replace("/CN=%s",'')
+        cmd_req = CMD_CERT_REQUEST % (CSRCONF_FILENAME, pkey, TEMP_REQFILE.name, issuer_subject)
+    else:
+        cmd_req = CMD_CERT_REQUEST % (CSRCONF_FILENAME, pkey, TEMP_REQFILE.name, issuer_subject, CN)
     process = subprocess.Popen(cmd_req, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     (out, err) = process.communicate()
     
