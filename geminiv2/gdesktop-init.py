@@ -264,7 +264,6 @@ msg = "***********************************\n"+\
 "***********************************\n"
 gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 
-
 if (len(GN_Nodes) == 0):
 	msg = "No GN Nodes Present. Will not proceed"
         gemini_util.write_to_log(msg,gemini_util.printtoscreen)
