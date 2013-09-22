@@ -357,7 +357,7 @@ def check_if_ready(Node,pKey):
 #
 # Check for Supported OS
 #
-def isOSSupported(Node,pKey):
+def isOSSupported(Node,pKey,isSudoPresent=True):
 
 	global ssh
 	global NOTSUPPORTED_FLAG
@@ -368,10 +368,11 @@ def isOSSupported(Node,pKey):
 	hostname = Node['login_hostname']
 	port = Node['login_port']
 	username = Node['login_username']
+	ssh_username = Node['ssh_username']
 	vid = Node['nodeid']
 
 	SUDO = 'sudo '
-	if(isRoot(username)):
+	if(not isSudoPresent):
 		SUDO = ''
 
 	msg = "Checking if OS on Node : \""+vid+"\" is supported"
@@ -381,10 +382,10 @@ def isOSSupported(Node,pKey):
 	additional_cmd = SUDO+"rm -rf /tmp/version_check.sh;wget -P /tmp "+INSTOOLS_repo_url+"scripts/version_check.sh;chmod +x "+EXP_NODE_tmppath+"/version_check.sh;"+SUDO+" "+EXP_NODE_tmppath+"/version_check.sh "
 	cmd = SUDO+'ls '+SUPPORTED_FLAG
 
-	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',pre_cmd+additional_cmd,None,None)
+	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,ssh_username,pKey,'ssh',pre_cmd+additional_cmd,None,None)
 	write_to_processlog(out_ssh,err_ssh)
 
-	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
+	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,ssh_username,pKey,'ssh',cmd,None,None)
 	write_to_processlog(out_ssh,err_ssh)
    	if(ret_code == 0):
 	   return TRUE
@@ -418,6 +419,27 @@ def isRoot(username):
 	else:
 		return FALSE
 
+def isSudoPresent(Node,pKey):
+
+	global ssh
+	
+	hostname = Node['login_hostname']
+	port = Node['login_port']
+	username = Node['login_username']
+
+	cmd = 'which sudo'	
+
+	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None,pty=True)
+	write_to_processlog(out_ssh,err_ssh)
+
+	if (ret_code != 0):
+		return FALSE
+	else:
+		return TRUE
+
+
+
+
 #
 # Check if machine is reachable and then perform OS support version check
 # This is usually done before instrumentizing
@@ -436,21 +458,33 @@ def precheckNodes(GN_Node,MP_Nodes,pKey):
 	username = GN_Node['login_username']
 	vid = GN_Node['nodeid']
 
-	SUDO = 'sudo '
-	if(isRoot(username)):
+	use_sudo = isSudoPresent(GN_Node,pKey)
+
+	if(not use_sudo):
 		SUDO = ''
-	pre_cmd ="rm -rf "+EXP_NODE_tmppath+"/sudoers.tgz;wget -P "+EXP_NODE_tmppath+" "+INSTOOLS_repo_url+"tarballs/sudoers.tgz;";
-	cmd = SUDO+"tar xzf "+EXP_NODE_tmppath+"/sudoers.tgz -C /"
+		ssh_username = "root"
+	else:
+		SUDO = 'sudo '
+		ssh_username = username
+	
 
-	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',pre_cmd,None,None,pty=True)
+	GN_Node['ssh_username'] = ssh_username
+
+	cmd0 = SUDO + "/usr/sbin/usermod -a -G root "+ username+";"
+	cmd1 = SUDO + "rm -rf /etc/sudoers.d/gemini_sudo;"
+	cmd2 = SUDO + "wget -P /etc/sudoers.d/ "+INSTOOLS_repo_url+"confs/gemini_sudo ;chmod 0440 /etc/sudoers.d/gemini_sudo;"
+	cmd3 = SUDO + "chmod 0440 /etc/sudoers.d/gemini_sudo;"
+	cmd4 = SUDO + "sh -c 'echo \"#includedir /etc/sudoers.d\" >>/etc/sudoers'"
+
+	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,ssh_username,pKey,'ssh',cmd0+" "+cmd1+" "+cmd2+" "+cmd3+" "+cmd4,None,None,pty=True)
 	write_to_processlog(out_ssh,err_ssh)
 
-	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None,pty=True)
-	write_to_processlog(out_ssh,err_ssh)
+#	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None,pty=True)
+#	write_to_processlog(out_ssh,err_ssh)
 	if (ret_code != 0):
 		msg =  " (Node : "+vid+") "+err_ssh+"\nInstrumentization will terminate. Please make sure your experiment is running"
 		return FALSE,msg
-	if (not isOSSupported(GN_Node,pKey)):
+	if (not isOSSupported(GN_Node,pKey,use_sudo)):
 		msg = "The Operating System on the Node \""+vid+"\" is not compatible with GEMINI"
 		set_unset_LOCK(GN_Node,"OS_NOT_SUPPORTED on "+vid+"/"+hostname+":"+port,pKey)
 		return FALSE,msg
@@ -465,22 +499,39 @@ def precheckNodes(GN_Node,MP_Nodes,pKey):
 		username = Node['login_username']
 		vid = Node['nodeid']
 
-		SUDO = 'sudo '
-		if(isRoot(username)):
+		use_sudo = isSudoPresent(Node,pKey)
+
+		if(not use_sudo):
 			SUDO = ''
-		pre_cmd ="rm -rf "+EXP_NODE_tmppath+"/sudoers.tgz;wget -P "+EXP_NODE_tmppath+" "+INSTOOLS_repo_url+"tarballs/sudoers.tgz;";
-		cmd = SUDO+"tar xzf "+EXP_NODE_tmppath+"/sudoers.tgz -C /"
+			ssh_username = "root"
+		else:
+			SUDO = 'sudo '
+			ssh_username = username
+		Node['ssh_username'] = ssh_username
+	
+		cmd0 = SUDO + "/usr/sbin/usermod -a -G root "+ username+";"
+		cmd1 = SUDO + "rm -rf /etc/sudoers.d/gemini_sudo;"
+		cmd2 = SUDO + "wget -P /etc/sudoers.d/ "+INSTOOLS_repo_url+"confs/gemini_sudo ;"
+		cmd3 = SUDO + "chmod 0440 /etc/sudoers.d/gemini_sudo;"
+		cmd4 = SUDO + "sh -c 'echo \"#includedir /etc/sudoers.d\" >>/etc/sudoers'"
 
-		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',pre_cmd,None,None,pty=True)
+		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,ssh_username,pKey,'ssh',cmd0+" "+cmd1+" "+cmd2+" "+cmd3+" "+cmd4,None,None,pty=True)
 		write_to_processlog(out_ssh,err_ssh)
 
-		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None,pty=True)
-		write_to_processlog(out_ssh,err_ssh)
+
+	#	pre_cmd ="rm -rf "+EXP_NODE_tmppath+"/sudoers.tgz;wget -P "+EXP_NODE_tmppath+" "+INSTOOLS_repo_url+"tarballs/sudoers.tgz;";
+	#	cmd = SUDO+"tar xzf "+EXP_NODE_tmppath+"/sudoers.tgz -C /"
+
+	#	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',pre_cmd,None,None,pty=True)
+	#	write_to_processlog(out_ssh,err_ssh)
+
+	#	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None,pty=True)
+	#	write_to_processlog(out_ssh,err_ssh)
 		if (ret_code != 0):
 			msg =  hostname+" at port "+port+" (Node : "+vid+") is not responding\nInstrumentization will terminate. Please make sure your experiment is running"+"\n"+err_ssh
 			return FALSE,msg
 
-		if (not isOSSupported(Node,pKey)):
+		if (not isOSSupported(Node,pKey,use_sudo)):
 			msg = "The Operating System on the Node \""+vid+"\" is not compatible with GEMINI"
 			set_unset_LOCK(GN_Node,"OS_NOT_SUPPORTED on "+vid+"/"+hostname+":"+port,pKey)
 			return FALSE,msg

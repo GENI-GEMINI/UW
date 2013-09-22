@@ -124,11 +124,11 @@ def InstrumentizeProcess(my_manager,pruned_GN_Nodes,pruned_MP_Nodes,q):
 		msg = "Installing and configuring MP Nodes for Active Measurements at "+my_manager
 		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 		gemini_util.install_Active_measurements(pruned_MP_Nodes,pruned_GN_Nodes[0],USERURN,SLICEURN,slice_uuid,unis_topo[my_manager],LAMPCERT,pKey)
-	if(gemini_util.version == gemini_util.devel_version or gemini_util.DISABLE_ACTIVE):
-		(status,msg) = gemini_util.workaroud_for_unified_gemini_devel(pruned_GN_Nodes[0],pKey)
-		if(not status):
-			msg = msg + "\nERROR @ {"+my_manager+"} :: Problem Implementing devel workaround\n"
-			gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+#	if(gemini_util.version == gemini_util.devel_version or gemini_util.DISABLE_ACTIVE):
+#		(status,msg) = gemini_util.workaroud_for_unified_gemini_devel(pruned_GN_Nodes[0],pKey)
+#		if(not status):
+#			msg = msg + "\nERROR @ {"+my_manager+"} :: Problem Implementing devel workaround\n"
+#			gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 
 	gemini_util.initialize_Drupal_menu(pruned_GN_Nodes[0],pKey)
 	# Unlock the GN
