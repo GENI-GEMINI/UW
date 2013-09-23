@@ -458,9 +458,9 @@ def precheckNodes(GN_Node,MP_Nodes,pKey):
 	username = GN_Node['login_username']
 	vid = GN_Node['nodeid']
 
-	use_sudo = isSudoPresent(GN_Node,pKey)
+	use_sudo_gn = isSudoPresent(GN_Node,pKey)
 
-	if(not use_sudo):
+	if(not use_sudo_gn):
 		SUDO = ''
 		ssh_username = "root"
 	else:
@@ -484,7 +484,7 @@ def precheckNodes(GN_Node,MP_Nodes,pKey):
 	if (ret_code != 0):
 		msg =  " (Node : "+vid+") "+err_ssh+"\nInstrumentization will terminate. Please make sure your experiment is running"
 		return FALSE,msg
-	if (not isOSSupported(GN_Node,pKey,use_sudo)):
+	if (not isOSSupported(GN_Node,pKey,use_sudo_gn)):
 		msg = "The Operating System on the Node \""+vid+"\" is not compatible with GEMINI"
 		set_unset_LOCK(GN_Node,"OS_NOT_SUPPORTED on "+vid+"/"+hostname+":"+port,pKey)
 		return FALSE,msg
@@ -538,7 +538,7 @@ def precheckNodes(GN_Node,MP_Nodes,pKey):
 		msg = "Node : \""+vid+"\" passed pre-check test"
 		write_to_log(msg,printtoscreen)
 
-	detailedProbeComplete(GN_Node,pKey)	
+	detailedProbeComplete(GN_Node,pKey,use_sudo_gn)	
 	return TRUE,msg
 
 #
@@ -1800,11 +1800,12 @@ def isdetailedProbeRequired(Node,pKey):
 	username = Node['login_username']
 	vid = Node['nodeid']
 
-	SUDO = 'sudo '
-	if(isRoot(username)):
-		SUDO = ''
+#	SUDO = 'sudo '
+#	if(isRoot(username)):
+#		SUDO = ''
 
-	cmd = SUDO+'ls '+DETAILED_PROBE_COMPLETED
+	#cmd = SUDO+'ls '+DETAILED_PROBE_COMPLETED
+	cmd = 'ls '+DETAILED_PROBE_COMPLETED
 
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
 	write_to_processlog(out_ssh,err_ssh)
@@ -1815,7 +1816,7 @@ def isdetailedProbeRequired(Node,pKey):
 
 	return False
 
-def detailedProbeComplete(Node,pKey):
+def detailedProbeComplete(Node,pKey,use_sudo):
 
 	DETAILED_PROBE_COMPLETED = '/var/emulab/lock/DETAILED_PROBE_COMPLETED'
 
@@ -1824,13 +1825,17 @@ def detailedProbeComplete(Node,pKey):
 	username = Node['login_username']
 	vid = Node['nodeid']
 
-	SUDO = 'sudo '
-	if(isRoot(username)):
+	if(not use_sudo):
 		SUDO = ''
+		ssh_username = "root"
+	else:
+		SUDO = 'sudo '
+		ssh_username = username
+	
 
 	cmd = SUDO+'touch '+DETAILED_PROBE_COMPLETED
 
-	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
+	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,ssh_username,pKey,'ssh',cmd,None,None)
 	write_to_processlog(out_ssh,err_ssh)
    	if(ret_code == 0):
 	   return True
