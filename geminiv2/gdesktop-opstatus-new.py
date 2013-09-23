@@ -61,7 +61,6 @@ def opStatusProcess(GN_Node,MP_Nodes,queue):
 	# extensive check performed once on all nodes 
 	# split process by filtering nodes based on CM URN
 	# grouping GN[cmurn] = MP[cmurn]
-
 	if(gemini_util.isdetailedProbeRequired(GN_Node,pKey)):
 		gemini_util.precheckNodes(GN_Node,MP_Nodes,pKey)
 	pass	
@@ -237,7 +236,7 @@ else:
 	for GN_Node in GN_Nodes:
 		pruned_MP_Nodes = gemini_util.pruneNodes(MP_Nodes,GN_Node['gemini_urn_to_monitor'],'')
 		result_queue = multiprocessing.Queue()
-		p = multiprocessing.Process(target=opStatusProcess,args=(GN_Node,MP_Nodes,result_queue,))
+		p = multiprocessing.Process(target=opStatusProcess,args=(GN_Node,pruned_MP_Nodes,result_queue,))
 		proclist.append(p)
 		p.start()                                                                                                                      
 		results.append(result_queue)
