@@ -234,6 +234,11 @@ for Node in Nodes:
 	ismc = Node['ismc']
 	login_hostname = Node['login_hostname']
 	login_username = Node['login_username']
+        if(login_username != username):
+                msg = "Your username differs from the username in the manifest. So i will change it the correct one for my use"
+                gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+                Node['login_username'] = username
+	other_members = Node['additional_users']
 	login_port = Node['login_port']
 	mchostname = Node['mchostname']
 	cmurn = Node['cmurn']
@@ -253,6 +258,7 @@ for Node in Nodes:
 	"Hostname to login => "+login_hostname+"\n"+ \
 	"Username to login with => "+login_username+"\n"+ \
 	"SSH port to use for Login => "+login_port+"\n"+ \
+	"Other members on this Node => "+' , '.join(other_members)+"\n"+ \
 	"Sliver_id => "+sliver_id+"\n"+ \
 	"Its CMURN => "+cmurn+"\n"+ \
 	"Gemini Node Type => "+gemini_node_type+"\n"+ \
@@ -263,7 +269,6 @@ msg = "***********************************\n"+\
 "You have "+str(len(MP_Nodes))+" MP Nodes and "+str(len(GN_Nodes))+" GN Nodes\n"+\
 "***********************************\n"
 gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-
 if (len(GN_Nodes) == 0):
 	msg = "No GN Nodes Present. Will not proceed"
         gemini_util.write_to_log(msg,gemini_util.printtoscreen)
@@ -271,7 +276,10 @@ if (len(GN_Nodes) == 0):
 
 dpadmin_username = "drupal_admin"
 dpadmin_passwd = gemini_util.random_password()
-m = hashlib.sha1(user_crypt)
+if(gemini_util.version == gemini_util.devel_version):
+	m = hashlib.sha1(slice_crypt)
+else:
+	m = hashlib.sha1(user_crypt)
 user_password_for_drupal = m.hexdigest()
 
 proclist = []
