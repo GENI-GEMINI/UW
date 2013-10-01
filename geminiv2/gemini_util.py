@@ -84,10 +84,8 @@ UNIS_URL = "https://unis.incntre.iu.edu:8443"
 INSTOOLS_repo_url = mc_repo_rooturl+"GEMINI/"+version+"/"
 EXP_NODE_tmppath = "/tmp"
 EXP_TMP_PATH = "/tmp"
-TRUE = 1
-FALSE = 0
 debug = 0
-DISABLE_ACTIVE = FALSE
+DISABLE_ACTIVE = False
 ERROR = "ERROR"
 printtoscreen=1
 dontprinttoscreen=0
@@ -173,7 +171,7 @@ def install_keys_plus_shell_in_a_box(GN_Node,MP_Nodes,my_public_key,pKey):
 		write_to_processlog(out_ssh,err_ssh)
 		if (ret_code != 0):
 			msg =  "Problem Initializing the GN Node "+str(vid)+"\n"+str(err_ssh)
-			return FALSE,msg
+			return False,msg
 		pass
 
 
@@ -182,7 +180,7 @@ def install_keys_plus_shell_in_a_box(GN_Node,MP_Nodes,my_public_key,pKey):
 	write_to_processlog(out_ssh,err_ssh)
 	if (ret_code != 0):
 		msg =  "Problem Initializing the GN Node "+str(vid)+"\n"+str(err_ssh)
-		return FALSE,msg
+		return False,msg
 
 
 
@@ -211,7 +209,7 @@ def install_keys_plus_shell_in_a_box(GN_Node,MP_Nodes,my_public_key,pKey):
 		write_to_processlog(out_ssh,err_ssh)
 		if(ret_code != 0):
 			msg = "SCP to "+hostname+":"+port+" failed "+ err_ssh
-			return FALSE,msg
+			return False,msg
 
 		if(socket.getfqdn() != "genidesktop.netlab.uky.edu"):
 			msg = "Placing your ssh public key for Genidesktop on "+vid
@@ -221,7 +219,7 @@ def install_keys_plus_shell_in_a_box(GN_Node,MP_Nodes,my_public_key,pKey):
 			write_to_processlog(out_ssh,err_ssh)
 			if (ret_code != 0):
 				msg =  "Problem Initializing the MP Node "+str(vid)+"\n"+str(err_ssh)
-				return FALSE,msg
+				return False,msg
 		pass
 
 
@@ -250,16 +248,16 @@ def install_keys_plus_shell_in_a_box(GN_Node,MP_Nodes,my_public_key,pKey):
 	write_to_processlog(out_ssh,err_ssh)
 	if (ret_code != 0):
 		msg =  "Problem generating shell-in-a-box config for the GN Node "+str(vid)+"\n"+str(err_ssh)
-		return FALSE,msg
+		return False,msg
 
 	cmd = 'sudo sh -c "/etc/shellinabox/shellinabox_for_instools.sh > /dev/null 2>&1"'
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
 	write_to_processlog(out_ssh,err_ssh)
 	if (ret_code != 0):
 		msg =  "Problem starting shell-in-a-box script on the GN Node "+str(vid)+"\n"+str(err_ssh)
-		return FALSE,msg
+		return False,msg
 
-	return TRUE,""
+	return True,""
 
 #
 # Put user credentials  onto MC and setup ssh keys for communication
@@ -308,7 +306,7 @@ def NodeInstall(Node,node_cmd,action,pKey):
 	write_to_processlog(out_ssh,err_ssh)
 	if (ret_code != 0):
 		msg =  "Problem at "+str(hostname)+"\n"+str(err_ssh)
-		return FALSE,msg
+		return False,msg
 
 	msg = "Node "+action+" Scripts on Node: \""+vid+"\" completed."
 	write_to_log(msg,printtoscreen)
@@ -341,18 +339,18 @@ def check_if_ready(Node,pKey):
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd+filename,None,None)
 		write_to_processlog(out_ssh,err_ssh)
 		if(err_ssh):
-			return FALSE
+			return False
 
 		out = out_ssh.strip()
 		if (out == "INSTALLATION_COMPLETE"): 
-	   		return TRUE
+	   		return True
 		elif(out == "INSTALLATION_IN_PROGRESS"):
-			return FALSE
+			return False
 		else:
 			pass
 	else:
-		return FALSE
-	return TRUE
+		return False
+	return True
 
 #
 # Check for Supported OS
@@ -388,11 +386,11 @@ def isOSSupported(Node,pKey,isSudoPresent=True):
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,ssh_username,pKey,'ssh',cmd,None,None)
 	write_to_processlog(out_ssh,err_ssh)
    	if(ret_code == 0):
-	   return TRUE
+	   return True
 	else:
-	   return FALSE
+	   return False
 
-	return TRUE
+	return True
 
 def pruneNodes(Nodes,AM_URN,GN):
 	prunedNodes = []
@@ -415,9 +413,9 @@ def pruneNodes(Nodes,AM_URN,GN):
 
 def isRoot(username):
 	if(username == 'root'):
-		return TRUE
+		return True
 	else:
-		return FALSE
+		return False
 
 def isSudoPresent(Node,pKey):
 
@@ -433,9 +431,9 @@ def isSudoPresent(Node,pKey):
 	write_to_processlog(out_ssh,err_ssh)
 
 	if (ret_code != 0):
-		return FALSE
+		return False
 	else:
-		return TRUE
+		return True
 
 
 
@@ -483,11 +481,11 @@ def precheckNodes(GN_Node,MP_Nodes,pKey):
 #	write_to_processlog(out_ssh,err_ssh)
 	if (ret_code != 0):
 		msg =  " (Node : "+vid+") "+err_ssh+"\nInstrumentization will terminate. Please make sure your experiment is running"
-		return FALSE,msg
+		return False,msg
 	if (not isOSSupported(GN_Node,pKey,use_sudo_gn)):
 		msg = "The Operating System on the Node \""+vid+"\" is not compatible with GEMINI"
 		set_unset_LOCK(GN_Node,"OS_NOT_SUPPORTED on "+vid+"/"+hostname+":"+port,pKey)
-		return FALSE,msg
+		return False,msg
 	msg = "Node : \""+vid+"\" passed pre-check test"
 	write_to_log(msg,printtoscreen)
 
@@ -529,17 +527,17 @@ def precheckNodes(GN_Node,MP_Nodes,pKey):
 	#	write_to_processlog(out_ssh,err_ssh)
 		if (ret_code != 0):
 			msg =  hostname+" at port "+port+" (Node : "+vid+") is not responding\nInstrumentization will terminate. Please make sure your experiment is running"+"\n"+err_ssh
-			return FALSE,msg
+			return False,msg
 
 		if (not isOSSupported(Node,pKey,use_sudo)):
 			msg = "The Operating System on the Node \""+vid+"\" is not compatible with GEMINI"
 			set_unset_LOCK(GN_Node,"OS_NOT_SUPPORTED on "+vid+"/"+hostname+":"+port,pKey)
-			return FALSE,msg
+			return False,msg
 		msg = "Node : \""+vid+"\" passed pre-check test"
 		write_to_log(msg,printtoscreen)
 
 	detailedProbeComplete(GN_Node,pKey,use_sudo_gn)	
-	return TRUE,msg
+	return True,msg
 
 #
 # Ask user if he/she want to instrumentize all the CM's in the topology
@@ -622,10 +620,10 @@ def startStatscollection(GN_Node,pKey):
 	write_to_processlog(out_ssh,err_ssh)
 	if(ret_code != 0):
 		msg = "Problem initiating Stat collections on the GN Node "+vid
-		return FALSE,msg
+		return False,msg
 
 
-	return TRUE,''
+	return True,''
 
 #
 # PLace exp data on GN 
@@ -654,9 +652,9 @@ def dump_Expinfo_on_GN(GN_Node,userurn,email,instools_password,sliceurn,cmurn,dp
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
 	write_to_processlog(out_ssh,err_ssh)
 	if (ret_code == 0):
-	   return TRUE,""
+	   return True,""
    	else:
-	   return FALSE,"Error send Exp Data to GN "+vid
+	   return False,"Error send Exp Data to GN "+vid
 
 #
 # Initialize Drupal menus for this topology
@@ -722,17 +720,17 @@ def lock_unlock_MC(GN_Node,what_to_do,pKey):
 	while(1):
 		(lockstatus,ret_code,error_msg) = getLockStatus(GN_Node,pKey)
 		if(ret_code == -1 ):
-			return FALSE,error_msg
+			return False,error_msg
 		if(lockstatus != "" and  what_to_do == "init_lock"):
 			msg = "GeniDesktop at "+GN_Node['nodeid']+" has a status of "+lockstatus+"..\nCannot start another instance"
-			return FALSE,msg
+			return False,msg
 		elif(lockstatus == "INITIALIZATION_IN_PROGRESS" and what_to_do == "init_lock"):
 			msg = "GeniDesktop Initialization at "+GN_Node['nodeid']+" in progress..\nCannot start another instance"
-			return FALSE,msg
+			return False,msg
 		elif(lockstatus == "INITIALIZATION_COMPLETE"):
 			if(what_to_do == "init_lock" ):
 				msg = "GeniDesktop Initialization at "+GN_Node['nodeid']+" was previously completed..\nCannot start another instance"
-				return FALSE,msg
+				return False,msg
 			elif(what_to_do == "install_lock"):
 				msg = "Global Node Software Installation starting for "+GN_Node['nodeid']+"..."
 				write_to_log(msg,printtoscreen)
@@ -741,20 +739,20 @@ def lock_unlock_MC(GN_Node,what_to_do,pKey):
 				continue
 			elif(what_to_do == "instrument_lock"):
 				msg = "Cannot be in this state (instrument_lock before install_lock) ..\n"
-				return FALSE,msg
+				return False,msg
 		elif(lockstatus == "INSTALLATION_COMPLETE"):
 			if(what_to_do == "init_lock" ):
 				msg = "Invalid operation Error..\n"
-				return FALSE,msg
+				return False,msg
 			elif(what_to_do == "instrument_lock"):
 				(result,msg) = set_unset_LOCK(GN_Node,'INSTRUMENTIZE_IN_PROGRESS',pKey)
 				if(result):
 					msg = "Gemini Configuration setup is starting for "+GN_Node['nodeid']+"..."
-					return TRUE,msg
+					return True,msg
 				else:
-					return FALSE,msg
+					return False,msg
 			elif(what_to_do == "install_lock"):
-				return TRUE,msg
+				return True,msg
 		elif(lockstatus == "INSTALLATION_IN_PROGRESS" and what_to_do == 'install_lock'):
 			msg = "Global Node "+GN_Node['nodeid']+" software Installation for passive measurements is in progress\nWill check again in 15 seconds...."
 			write_to_log(msg,printtoscreen)
@@ -765,23 +763,23 @@ def lock_unlock_MC(GN_Node,what_to_do,pKey):
 			(result,msg) = set_unset_LOCK(GN_Node,'INSTRUMENTIZE_COMPLETE',pKey)
 			if(result):
 				msg = "Gemini Configuration setup for "+GN_Node['nodeid']+" is complete.."
-				return TRUE,msg
+				return True,msg
 			else:
-				return FALSE,msg
+				return False,msg
 		elif(lockstatus == "INSTRUMENTIZE_COMPLETE"):
 			msg = "Gemini Configuration setup for "+GN_Node['nodeid']+" is already complete..\nWill not proceed for this AM"
-			return FALSE,msg
+			return False,msg
 		elif(lockstatus == "" and what_to_do == "init_lock" ):
 			msg = "GeniDesktop Initialization for "+GN_Node['nodeid']+" is safe to start"
-			return TRUE,msg
+			return True,msg
 		elif(lockstatus.find('IN_PROGRESS') != -1 and  what_to_do.find("lock") != -1):
 			msg = "GeniDesktop has some process in progress at "+GN_Node['nodeid']+"..\nCannot start another instance"
-			return FALSE,msg
+			return False,msg
 		else:
 			msg = 'Your slice has not been initialized.\nCannot proceed without initialization first'
-			return FALSE,msg
+			return False,msg
 
-	return TRUE,msg
+	return True,msg
 
 
 def set_unset_LOCK(Node,flag,pKey):
@@ -801,7 +799,7 @@ def set_unset_LOCK(Node,flag,pKey):
 	if(ret_code != 0):
 		f.close()
 		msg = "Unable to set flag "+flag+" on "+hostname+" "+err_ssh
-		return FALSE,msg
+		return False,msg
 	f.close()
 	
 	sendcmd = 'sudo mv '+'/tmp/'+os.path.basename(adata)+' '+INSTOOLS_LOCK+';'
@@ -811,9 +809,9 @@ def set_unset_LOCK(Node,flag,pKey):
 	if(ret_code != 0):
 		f.close()
 		msg = "Unable to set flag "+flag+" on "+hostname+" "+err_ssh
-		return FALSE,msg
+		return False,msg
 
-	return TRUE,''
+	return True,''
 
 #
 # Initialize/Start/Stop Netflow data collection 
@@ -882,9 +880,9 @@ def	update_Drupaladmin_acctinfo(GN_Node,pKey):
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
 	write_to_processlog(out_ssh,err_ssh)
 	if(ret_code !=0 ):
-		return FALSE,err_ssh
+		return False,err_ssh
 	else:
-		return TRUE,''
+		return True,''
 
 
 	
@@ -972,7 +970,7 @@ def random_password():
 # CALL LAMP python script to send MANIFEST
 def LAMP_sendmanifest(SLICEURN,manifest,LAMPCERT,SLICECRED_FOR_LAMP):
 
-	state = TRUE
+	state = True
 	cred_file = ""
 	manifest_file = ""
 	lpcert_file = ""
@@ -1002,11 +1000,11 @@ def LAMP_sendmanifest(SLICEURN,manifest,LAMPCERT,SLICECRED_FOR_LAMP):
 	write_to_processlog(out,err)
 	try:
 		check = out.index("data element(s) successfully replaced")
-		state = TRUE
+		state = True
 		msg = "Sent Manifest to the LAMP UNIS Successfully"
 		write_to_log(msg,printtoscreen)
 	except ValueError:
-		state = FALSE
+		state = False
 		msg = ""
 
 	f.close
@@ -1021,7 +1019,7 @@ def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,SLICEUUID,UNIS
 	global EXP_NODE_tmppath
 	global INSTOOLS_repo_url
 
-	state = TRUE
+	state = True
 
 	if (DISABLE_ACTIVE):
 		msg = "Will not enable Active Services due to UNIS Failure"
@@ -1453,10 +1451,11 @@ def clearUserinfoatParser(user_crypt):
 	post_return = post_response.read()
 	return post_return
 
-def getJSONManifestFromParser(slice_crypt,slicename,api,force_refresh):
+
+def getJSONManifestFromParser(slice_crypt,sliceurn,userurn,user_crypt,api):
 	global debug
 	
-	post_data = urllib.urlencode({'key':slice_crypt,'slice_name':slicename,'api':api,'force_refresh':force_refresh,'debug':debug})
+	post_data = urllib.urlencode({'key':slice_crypt,'sliceurn':sliceurn,'userurn':userurn,'user_crypt':user_crypt,'api':api,'debug':debug})
 	url = 'https://parser.netlab.uky.edu/parseManifest.php'
 	req = urllib2.Request(url,post_data)
 	post_response = urllib2.urlopen(req)
@@ -1866,7 +1865,10 @@ def getMyExpInfo(CERT_ISSUER,username,cert_string,project,force_refresh):
 	global passphrase
 
 	UserJSON = ''
-	cachedUserJSON = fetchFromCache(CERT_ISSUER,username,"getuserinfo")
+	if(force_refresh):
+		cachedUserJSON = ''
+	else:
+		cachedUserJSON = fetchFromCache(CERT_ISSUER,username,"getuserinfo")
 	if (cachedUserJSON != ''):
 		msg = "Fetching User Info from the Cache"
 		write_to_log(msg,printtoscreen)
@@ -1907,7 +1909,10 @@ def getMyExpInfo(CERT_ISSUER,username,cert_string,project,force_refresh):
 
 
 	my_sliceurn = getSliceURN(framework,USERURN,SLICENAME,project)
-	cachedSliceJSON = fetchFromCache(CERT_ISSUER,username,"getsliceinfo")
+	if(force_refresh):
+		cachedSliceJSON = ''
+	else:
+		cachedSliceJSON = fetchFromCache(CERT_ISSUER,username,"getsliceinfo")
 	SliceJSON = ''
 	if (cachedSliceJSON != ''):
 		msg = "Fetching Slice Info from the Cache"
@@ -1931,7 +1936,7 @@ def getMyExpInfo(CERT_ISSUER,username,cert_string,project,force_refresh):
 		sys.exit(1)
 
 	write_to_log(SliceJSON,dontprinttoscreen)
-	found = FALSE
+	found = False
 	if (SliceOBJ['code'] != 0):
 		msg = "User/Slice not identified : "+ SliceOBJ['output']
 		write_to_log(msg,printtoscreen)
@@ -1942,7 +1947,7 @@ def getMyExpInfo(CERT_ISSUER,username,cert_string,project,force_refresh):
 		(junk,slicename_from_parser) = SliceInfo['sliceurn'].rsplit('+',1)
 		if (SLICENAME == slicename_from_parser):
 			SLICEURN =  SliceInfo['sliceurn']
-			found = TRUE
+			found = True
 			break
 
 	if(not found):
@@ -1954,7 +1959,10 @@ def getMyExpInfo(CERT_ISSUER,username,cert_string,project,force_refresh):
 	write_to_log(msg,printtoscreen)
 	slice_crypt = SliceInfo['crypt']
 	api = "getNodeInfo"
-	cachedNodesJSON = fetchFromCache(CERT_ISSUER,username,"nodeinfo")
+	if(force_refresh):
+		cachedNodesJSON = ''
+	else:
+		cachedNodesJSON = fetchFromCache(CERT_ISSUER,username,"nodeinfo")
 	NodesJSON = ''
 	if(cachedNodesJSON != ''):
 		msg = "Fetching Manifest Info from the Cache"
@@ -1963,7 +1971,7 @@ def getMyExpInfo(CERT_ISSUER,username,cert_string,project,force_refresh):
 	else:
 		msg = "Fetching Manifest Info from the GeniDesktop Parser"
 		write_to_log(msg,printtoscreen)
-		NodesJSON = getJSONManifestFromParser(slice_crypt,SLICENAME,api,force_refresh)
+		NodesJSON = getJSONManifestFromParser(slice_crypt,SLICEURN,USERURN,user_crypt,api)
 	try:
 		NodesOBJ = json.loads(NodesJSON.strip())
 		if(cachedNodesJSON == ''):

@@ -27,6 +27,7 @@ import hashlib
 import json
 import multiprocessing
 import gemini_util	# Import user defined routines
+from os.path import expanduser
 
 other_details = ""
 managers = []
@@ -34,7 +35,7 @@ jsonresult = {}
 GN_Nodes = []
 MP_Nodes = []
 keyfile = ""
-force_refresh = '1'
+force_refresh = False
 FILE = ''
 SLICEURN = ''
 
@@ -42,18 +43,17 @@ SLICEURN = ''
 def Usage():
         print "usage: " + sys.argv[ 0 ] + " [option...]"
         print """Options:
-    -d, --debug                         be verbose about XML methods invoked
-    --devel	                        Use Devel version [only for developers]
-    -x, --no_force_refresh                  Do not force parser to get fresh manifests from AMs
+    -d, --debug                         Be verbose
     -k, --pkey=file			Private SSH RSA Key file
-    -f file, --certificate=file         read SSL certificate from file
+    -f file, --certificate=file         Read SSL certificate from file
                                             [default: ~/.ssl/encrypted.pem]
-    -h, --help                          show options and usage
-    -n name, --slicename=name           specify human-readable name of slice
-                                            [default: mytestslice]
+    -p file, --passphrase=file          Read passphrase for certificate from file
+                                            [default: ~/.ssl/password]
+    -h, --help                          Show options and usage
+    -n name, --slicename=name           Specify human-readable name of slice
     -r PROJECT, --project=PROJECT	Name of project. (For use with portal framework.)
-    -p file, --passphrase=file          read passphrase from file
-                                            [default: ~/.ssl/password]"""
+    --force_refresh                     Force fetch all user/slice/sliver info rather than using locally cached version
+    --devel	                        Use Development version [only for developers]"""
 
 def opStatusProcess(GN_Node,MP_Nodes,queue):
 	global pKey
@@ -85,8 +85,8 @@ def opStatusProcess(GN_Node,MP_Nodes,queue):
 	return  
 
 try:
-    opts, REQARGS = getopt.gnu_getopt( sys.argv[ 1: ], "dhxk:f:n:p:r:",
-                                   [ "debug","help","no_force_refresh","pkey=","certificate=",
+    opts, REQARGS = getopt.gnu_getopt( sys.argv[ 1: ], "dhk:f:n:p:r:",
+                                   [ "debug","help","force_refresh","pkey=","certificate=",
                                      "slicename=","devel","passphrase=","project="] )
 except getopt.GetoptError, err:
     print >> sys.stderr, str( err )
@@ -94,19 +94,22 @@ except getopt.GetoptError, err:
     sys.exit( 1 )
 
 args = REQARGS
+print str(opts)
 LOGFILE = None
 project = None
 for opt, arg in opts:
     if opt in ( "-d", "--debug" ):
         gemini_util.debug = 1
-    elif opt in ( "--devel" ):
+    elif opt ==  "--devel" :
         gemini_util.version = gemini_util.devel_version
 	gemini_util.INSTOOLS_repo_url = gemini_util.mc_repo_rooturl+"GEMINI/"+gemini_util.version+"/"
-    elif opt in ( "-x","--no_force_refresh" ):
-        force_refresh = '0'
+    elif opt == "--force_refresh":
+        force_refresh = True
     elif opt in ( "-r", "--project"):
 	project = arg
-    elif opt in ( "-f", "--certificatefile" ):
+    elif opt in ('-f','--certificate'):
+	if(arg.startswith('~')):
+		arg = arg.replace('~',expanduser("~"),1)
         gemini_util.CERTIFICATE = arg
     elif opt in ( "-h", "--help" ):
         Usage()
@@ -124,9 +127,13 @@ for opt, arg in opts:
 			LOGFILE = mylogbase+"/gdesktop-opstatus-"+LOCALTIME+".log"
 			gemini_util.ensure_dir(LOGFILE)
 			gemini_util.openLogPIPE(LOGFILE)
-    elif opt in ( "-p", "--passphrasefile" ):
+    elif opt in ( "-p", "--passphrase" ):
+	if(arg.startswith('~')):
+		arg = arg.replace('~',expanduser("~"),1)
         gemini_util.PASSPHRASEFILE = arg
     elif opt in ( "-k", "--pkey" ):
+	if(arg.startswith('~')):
+		arg = arg.replace('~',expanduser("~"),1)
         keyfile = arg
 	if(not (keyfile != '' and os.path.isfile(keyfile))):
 		print "Please provide a valid private key file"
@@ -168,7 +175,7 @@ for  SliceInfo in Slices:
 	(junk,slicename_from_parser) = SliceInfo['sliceurn'].rsplit('+',1)
 	if (gemini_util.SLICENAME == slicename_from_parser):
 		SLICEURN =  SliceInfo['sliceurn']
-		found = gemini_util.TRUE
+		found = True
 		break
 
 if(not found):
