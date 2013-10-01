@@ -233,11 +233,11 @@ for Node in Nodes:
 	hostname = Node['hostname']
 	ismc = Node['ismc']
 	login_hostname = Node['login_hostname']
-	login_username = Node['login_username']
-        if(login_username != username):
+        if( Node['login_username'] != username):
                 msg = "Your username differs from the username in the manifest. So i will change it the correct one for my use"
                 gemini_util.write_to_log(msg,gemini_util.printtoscreen)
                 Node['login_username'] = username
+	login_username = Node['login_username']
 	other_members = Node['additional_users']
 	login_port = Node['login_port']
 	mchostname = Node['mchostname']
@@ -276,10 +276,7 @@ if (len(GN_Nodes) == 0):
 
 dpadmin_username = "drupal_admin"
 dpadmin_passwd = gemini_util.random_password()
-if(gemini_util.version == gemini_util.devel_version):
-	m = hashlib.sha1(slice_crypt)
-else:
-	m = hashlib.sha1(user_crypt)
+m = hashlib.sha1(slice_crypt)
 user_password_for_drupal = m.hexdigest()
 
 proclist = []

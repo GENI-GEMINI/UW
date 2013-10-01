@@ -124,12 +124,6 @@ def InstrumentizeProcess(my_manager,pruned_GN_Nodes,pruned_MP_Nodes,q):
 		msg = "Installing and configuring MP Nodes for Active Measurements at "+my_manager
 		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 		gemini_util.install_Active_measurements(pruned_MP_Nodes,pruned_GN_Nodes[0],USERURN,SLICEURN,slice_uuid,unis_topo[my_manager],LAMPCERT,pKey)
-#	if(gemini_util.version == gemini_util.devel_version or gemini_util.DISABLE_ACTIVE):
-#		(status,msg) = gemini_util.workaroud_for_unified_gemini_devel(pruned_GN_Nodes[0],pKey)
-#		if(not status):
-#			msg = msg + "\nERROR @ {"+my_manager+"} :: Problem Implementing devel workaround\n"
-#			gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-
 	gemini_util.initialize_Drupal_menu(pruned_GN_Nodes[0],pKey)
 	# Unlock the GN
 	(status,msg) = gemini_util.lock_unlock_MC(pruned_GN_Nodes[0],"instrument_unlock",pKey)
@@ -256,11 +250,11 @@ for Node in Nodes:
 	hostname = Node['hostname']
 	ismc = Node['ismc']
 	login_hostname = Node['login_hostname']
-	login_username = Node['login_username']
-        if(login_username != username):
+        if( Node['login_username'] != username):
                 msg = "Your username differs from the username in the manifest. So i will change it the correct one for my use"
                 gemini_util.write_to_log(msg,gemini_util.printtoscreen)
                 Node['login_username'] = username
+	login_username = Node['login_username']
 	other_members = Node['additional_users']
 	login_port = Node['login_port']
 	mchostname = Node['mchostname']

@@ -76,7 +76,7 @@ NOTSUPPORTED_FLAG='/var/emulab/lock/NOTSUPPORTED'
 SUPPORTED_FLAG='/var/emulab/lock/SUPPORTED'
 measure_scripts_path="/usr/testbed/bin/measure-scripts"
 ARCHIVE_CMD_FILE=measure_scripts_path+"/archive_cmd.sh"
-version="0.2"
+version="0.3"
 devel_version="0.3"
 mc_repo_rooturl="http://gemini.netlab.uky.edu/"
 lampca = "https://unis.incntre.iu.edu/protogeni/xmlrpc/lampca"
@@ -1738,28 +1738,6 @@ def do_method(ctx,module, method, params, URI=None, quiet=False, version=None,
         pass
     return (rval, response)
 
-
-def workaroud_for_unified_gemini_devel(GN_Node,pKey):
-	global INSTOOLS_repo_url
-
-	hostname = GN_Node['login_hostname']
-	port = GN_Node['login_port']
-	username = GN_Node['login_username']
-	vid = GN_Node['nodeid']
-
-	cmd0 = "sudo mv /etc/httpd/conf.d/001-main.conf /etc/httpd/conf.d/001-main.conf.save;"
-#	cmd1 = "wget -q -P /tmp/ "+INSTOOLS_repo_url+"patches/apache_config_for_lamp.patch;"
-#	cmd2 = "sudo patch /usr/local/etc/apache2/apache2-lamp-portal /tmp/apache_config_for_lamp.patch;"
-	cmd3 = "sudo /etc/init.d/httpd restart;"
-	command = cmd0+cmd3
-	
-	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',command,None,None)
-	write_to_processlog(out_ssh,err_ssh)
-	if (ret_code != 0):
-		msg =  "Problem Initializing the GN Node "+str(vid)+"\n"+str(err_ssh)
-		return FALSE,msg
-	else:
-		return TRUE,""
 
 def getSliceURN(framework,userurn,slicename,project=None):
 	plus = '+'
