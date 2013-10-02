@@ -94,7 +94,6 @@ except getopt.GetoptError, err:
     sys.exit( 1 )
 
 args = REQARGS
-print str(opts)
 LOGFILE = None
 project = None
 for opt, arg in opts:
