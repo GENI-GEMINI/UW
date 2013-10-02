@@ -1455,7 +1455,7 @@ def clearUserinfoatParser(user_crypt):
 def getJSONManifestFromParser(slice_crypt,sliceurn,userurn,user_crypt,api):
 	global debug
 	
-	post_data = urllib.urlencode({'key':slice_crypt,'sliceurn':sliceurn,'userurn':userurn,'user_crypt':user_crypt,'api':api,'debug':debug})
+	post_data = urllib.urlencode({'key':slice_crypt,'sliceurn':sliceurn,'userurn':userurn,'user_key':user_crypt,'api':api,'debug':debug})
 	url = 'https://parser.netlab.uky.edu/parseManifest.php'
 	req = urllib2.Request(url,post_data)
 	post_response = urllib2.urlopen(req)
