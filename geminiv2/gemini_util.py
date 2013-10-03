@@ -469,6 +469,14 @@ def precheckNodes(GN_Node,MP_Nodes,pKey):
 	GN_Node['ssh_username'] = ssh_username
 
 	cmd0 = SUDO + "/usr/sbin/usermod -a -G root "+ username+";"
+	if(len(GN_Node['additional_users']) > 1):
+	for user in GN_Node['additional_users']:
+		if(user == username):
+			continue
+		else:
+			cmd0 = cmd0+SUDO + "/usr/sbin/usermod -a -G root "+ user+";"
+
+
 	cmd1 = SUDO + "rm -rf /etc/sudoers.d/gemini_sudo;"
 	cmd2 = SUDO + "wget -P /etc/sudoers.d/ "+INSTOOLS_repo_url+"confs/gemini_sudo ;chmod 0440 /etc/sudoers.d/gemini_sudo;"
 	cmd3 = SUDO + "chmod 0440 /etc/sudoers.d/gemini_sudo;"
@@ -506,8 +514,14 @@ def precheckNodes(GN_Node,MP_Nodes,pKey):
 			SUDO = 'sudo '
 			ssh_username = username
 		Node['ssh_username'] = ssh_username
-	
 		cmd0 = SUDO + "/usr/sbin/usermod -a -G root "+ username+";"
+		if(len(Node['additional_users']) > 1):
+		for user in Node['additional_users']:
+			if(user == username):
+				continue
+			else:
+				cmd0 = cmd0+SUDO + "/usr/sbin/usermod -a -G root "+ user+";"
+
 		cmd1 = SUDO + "rm -rf /etc/sudoers.d/gemini_sudo;"
 		cmd2 = SUDO + "wget -P /etc/sudoers.d/ "+INSTOOLS_repo_url+"confs/gemini_sudo ;"
 		cmd3 = SUDO + "chmod 0440 /etc/sudoers.d/gemini_sudo;"
