@@ -181,7 +181,7 @@ for Node in Nodes:
 	ismc = Node['ismc']
 	login_hostname = Node['login_hostname']
         if( Node['login_username'] != username):
-                msg = "Your username differs from the username in the manifest. So i will change it the correct one for my use"
+		msg = "Login Username obtained from manifest is "+Node['login_username']+ " for node "+nodeid+". Will change it to "+username+" for GEMINI Instrumentation setup"
                 gemini_util.write_to_log(msg,gemini_util.printtoscreen)
                 Node['login_username'] = username
 	login_username = Node['login_username']
