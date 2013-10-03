@@ -644,7 +644,7 @@ def dump_Expinfo_on_GN(GN_Node,userurn,email,instools_password,sliceurn,cmurn,dp
 			additional_users = additional_users+','+user
 	additional_users = additional_users.lstrip(',')
 	pre_cmd ="sudo rm -rf "+measure_scripts_path+"/save_info.sh "+EXP_NODE_tmppath+"/save_info*;sudo wget -P "+EXP_NODE_tmppath+" "+INSTOOLS_repo_url+"tarballs/save_info.tgz;sudo tar xzf "+EXP_NODE_tmppath+"/save_info.tgz -C "+measure_scripts_path+";"
-	cmd = 'sudo '+measure_scripts_path+'/save_info.sh '+userurn+' '+cmurn+' '+sliceurn+' '+dpadmin_username+' '+dpadmin_passwd+' '+slice_crypt+' '+email+' '+instools_password+' '+hostname+' '+additional_users
+	cmd = 'sudo '+measure_scripts_path+'/save_info.sh '+userurn+' '+email+' '+additional_users+' '+cmurn+' '+sliceurn+' '+dpadmin_username+' '+dpadmin_passwd+' '+slice_crypt+' '+instools_password+' '+hostname
 	msg = "Saving Exp info on the Global Node "+vid
 	write_to_log(msg,dontprinttoscreen)
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',pre_cmd,None,None)
