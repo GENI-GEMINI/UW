@@ -647,8 +647,9 @@ def dump_Expinfo_on_GN(GN_Node,userurn,email,instools_password,sliceurn,cmurn,dp
 	cmd = 'sudo '+measure_scripts_path+'/save_info.sh '+userurn+' '+email+' '+additional_users+' '+cmurn+' '+sliceurn+' '+dpadmin_username+' '+dpadmin_passwd+' '+slice_crypt+' '+instools_password+' '+hostname
 	msg = "Saving Exp info on the Global Node "+vid
 	write_to_log(msg,dontprinttoscreen)
-	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',pre_cmd,None,None)
-	write_to_processlog(out_ssh,err_ssh)
+	if(sliceurn != ''):
+		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',pre_cmd,None,None)
+		write_to_processlog(out_ssh,err_ssh)
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
 	write_to_processlog(out_ssh,err_ssh)
 	if (ret_code == 0):

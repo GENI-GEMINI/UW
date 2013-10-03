@@ -125,6 +125,11 @@ def InstrumentizeProcess(my_manager,pruned_GN_Nodes,pruned_MP_Nodes,q):
 		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 		gemini_util.install_Active_measurements(pruned_MP_Nodes,pruned_GN_Nodes[0],USERURN,SLICEURN,slice_uuid,unis_topo[my_manager],LAMPCERT,pKey)
 	gemini_util.initialize_Drupal_menu(pruned_GN_Nodes[0],pKey)
+
+	# This is just to make sure we have the right user info who instrumented the slice
+	# A scenario  here is in case of a shared slice where one user initializes the slice and another instruments it.
+	(result,msg) = gemini_util.dump_Expinfo_on_GN(pruned_GN_Nodes[0],USERURN,email_id,'','','','','','',pKey)
+
 	# Unlock the GN
 	(status,msg) = gemini_util.lock_unlock_MC(pruned_GN_Nodes[0],"instrument_unlock",pKey)
 	if(not status):
