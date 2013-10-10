@@ -1584,7 +1584,7 @@ def sshConnection(hostname,port,username,pkey_object,what_to_do,cmd=None,localFi
 			time.sleep(5)
 			continue
 			
-		if(tries > 16):
+		if(tries > 4):
 			ssh.close()
 			print "tries is done"
 			return (sout,serr,int(ret_code))
