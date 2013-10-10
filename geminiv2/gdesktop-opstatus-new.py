@@ -61,7 +61,15 @@ def opStatusProcess(GN_Node,MP_Nodes,queue):
 	# extensive check performed once on all nodes 
 	# split process by filtering nodes based on CM URN
 	# grouping GN[cmurn] = MP[cmurn]
-	if(gemini_util.isdetailedProbeRequired(GN_Node,pKey)):
+	(isdetailcheckRequired,ret_code,err_ssh) = gemini_util.isdetailedProbeRequired(GN_Node,pKey)
+	if(ret_code == -1):
+		msg = "SSH_ERROR - "+err_ssh
+       		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+		queue.put(msg)
+		sys.exit(1)
+
+
+	if(isdetailcheckRequired):
 		gemini_util.precheckNodes(GN_Node,MP_Nodes,pKey)
 	pass	
 

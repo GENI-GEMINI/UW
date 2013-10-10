@@ -1584,14 +1584,14 @@ def sshConnection(hostname,port,username,pkey_object,what_to_do,cmd=None,localFi
 			time.sleep(5)
 			continue
 			
-		if(tries > 4):
+		if(tries >= 0):
 			ssh.close()
 			print "tries is done"
 			return (sout,serr,int(ret_code))
 		else:
 			print serr+" \nWill try again in 15 seconds"
 			tries = tries + 1
-			time.sleep(15)
+#			time.sleep(15)
 	if(what_to_do == 'scp'):
 		ftp = ssh.open_sftp()
 		ftp.put(localFile,remoteFile)
@@ -1808,11 +1808,13 @@ def isdetailedProbeRequired(Node,pKey):
 	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
 	write_to_processlog(out_ssh,err_ssh)
    	if(ret_code == 0):
-	   return False
+	   return (False,0,'')
+   	elif(ret_code == -1):
+	   return (False,-1,err_ssh)
 	else:
-	   return True
+	   return (True,0,'')
 
-	return False
+	return (False,0,'')
 
 def detailedProbeComplete(Node,pKey,use_sudo):
 
