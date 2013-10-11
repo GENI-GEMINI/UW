@@ -1861,7 +1861,8 @@ def fetchFromCache(CERT_ISSUER,username,api_call):
 
 	else:
 		f = open(FILE,'r')
-		return (f.readline()).strip()
+		#return (f.readline()).strip()
+		return (f.read()).strip()
 
 def writeToCache(CERT_ISSUER,username,api_call,json):
 	global SLICENAME
