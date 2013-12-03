@@ -1467,10 +1467,9 @@ def clearUserinfoatParser(user_crypt):
 	return post_return
 
 
-def getJSONManifestFromParser(slice_crypt,sliceurn,userurn,user_crypt,api):
+def getJSONManifestFromParser(slice_crypt,sliceurn,userurn,user_crypt,api,am_urns):
 	global debug
-	
-	post_data = urllib.urlencode({'key':slice_crypt,'sliceurn':sliceurn,'userurn':userurn,'user_key':user_crypt,'api':api,'debug':debug})
+	post_data = urllib.urlencode({'key':slice_crypt,'sliceurn':sliceurn,'userurn':userurn,'user_key':user_crypt,'api':api,'debug':debug,'am_urns':am_urns})
 	url = 'https://parser.netlab.uky.edu/parseManifest.php'
 	req = urllib2.Request(url,post_data)
 	post_response = urllib2.urlopen(req)
@@ -1878,7 +1877,7 @@ def writeToCache(CERT_ISSUER,username,api_call,json):
 	return
 
 
-def getMyExpInfo(CERT_ISSUER,username,cert_string,project,force_refresh):
+def getMyExpInfo(CERT_ISSUER,username,cert_string,project,force_refresh,AMURNS):
 	global SLICENAME
 	global passphrase
 
@@ -1989,7 +1988,7 @@ def getMyExpInfo(CERT_ISSUER,username,cert_string,project,force_refresh):
 	else:
 		msg = "Fetching Manifest Info from the GeniDesktop Parser"
 		write_to_log(msg,printtoscreen)
-		NodesJSON = getJSONManifestFromParser(slice_crypt,SLICEURN,USERURN,user_crypt,api)
+		NodesJSON = getJSONManifestFromParser(slice_crypt,SLICEURN,USERURN,user_crypt,api,AMURNS)
 	try:
 		NodesOBJ = json.loads(NodesJSON.strip())
 		if(cachedNodesJSON == ''):
@@ -2010,3 +2009,14 @@ def getMyExpInfo(CERT_ISSUER,username,cert_string,project,force_refresh):
 		writeToCache(CERT_ISSUER,username,'nodeinfo','')
 
 	return (UserOBJ['output'],SliceOBJ['output'],NodesOBJ['output'])
+
+
+def isValidURNs(urnlist):
+
+	reason = ''
+	urns = urnlist.split(',')
+	for urn in urns:
+		plus_splits = urn.split('+')
+		if (len(plus_splits) != 4 or plus_splits[0] != 'urn:publicid:IDN' or plus_splits[2] != 'authority' or (plus_splits[3] != 'am' and plus_splits[3] != 'cm')):
+			return False
+	return True

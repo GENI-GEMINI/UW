@@ -43,6 +43,7 @@ force_refresh = False
 FILE = ''
 DONE=0
 SLICEURN = ''
+AMURNS = ''
 
 def Usage():
         print "usage: " + sys.argv[ 0 ] + " [option...]"
@@ -53,6 +54,9 @@ def Usage():
                                             [default: ~/.ssl/encrypted.pem]
     -p file, --passphrase=file          Read passphrase for certificate from file
                                             [default: ~/.ssl/password]
+    -a urns, --amurns=list		Comma separated list of AM URNs where the user 
+					has slivers for this slice
+					    [default: Poll all AMs registered for this Clearing House]
     -h, --help                          Show options and usage
     -n name, --slicename=name           Specify human-readable name of slice
     -r PROJECT, --project=PROJECT	Name of project. (For use with portal framework.)
@@ -60,9 +64,9 @@ def Usage():
     --devel	                        Use Development version [only for developers]"""
 
 try:
-    opts, REQARGS = getopt.gnu_getopt( sys.argv[ 1: ], "dhk:f:n:p:r:",
+    opts, REQARGS = getopt.gnu_getopt( sys.argv[ 1: ], "dhk:f:n:p:r:a:",
                                    [ "debug","help","force_refresh","pkey=","certificate=",
-                                     "slicename=","devel","passphrase=","project="] )
+                                     "slicename=","devel","passphrase=","project=","amurns="] )
 except getopt.GetoptError, err:
     print >> sys.stderr, str( err )
     Usage()
@@ -81,6 +85,14 @@ for opt, arg in opts:
         force_refresh = True
     elif opt in ( "-r", "--project"):
 		project = arg
+    elif opt in ( "-a", "--amurns"):
+	result = gemini_util.isValidURNs(arg)
+	if(result):
+		AMURNS = arg
+	else:
+		print "Invalid AM URNS Provided"
+        	sys.exit( 1 )
+	
     elif opt in ( "-f", "--certificate" ):
 	if(arg.startswith('~')):
 		arg = arg.replace('~',expanduser("~"),1)
@@ -138,7 +150,7 @@ if(not (keyfile != '' and os.path.isfile(keyfile))):
 else:
 	pKey = SSH_pkey
 
-(UserInfo,Slices,Nodes) = gemini_util.getMyExpInfo(CERT_ISSUER,username,cf.read(),project,force_refresh)
+(UserInfo,Slices,Nodes) = gemini_util.getMyExpInfo(CERT_ISSUER,username,cf.read(),project,force_refresh,AMURNS)
 cf.close()
 username = UserInfo['uid']
 email_id = UserInfo['email']
