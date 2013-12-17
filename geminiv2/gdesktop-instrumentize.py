@@ -65,7 +65,6 @@ def InstrumentizeProcess(my_manager,pruned_GN_Nodes,pruned_MP_Nodes,q):
 	global gn_ms_proxykey_file
 	global mp_blipp_proxycert_file
 	global mp_blipp_proxykey_file
-	global irods_proxycert_file
 	global USERURN
 	global SLICEURN
 	global slice_uuid
@@ -118,7 +117,6 @@ def InstrumentizeProcess(my_manager,pruned_GN_Nodes,pruned_MP_Nodes,q):
 	if(not gemini_util.DISABLE_ACTIVE):
 		gemini_util.install_GN_Certs(pruned_GN_Nodes,pKey,gn_ms_proxycert_file,gn_ms_proxykey_file)
 		gemini_util.install_MP_Certs(pruned_MP_Nodes,pKey,mp_blipp_proxycert_file,mp_blipp_proxykey_file)
-	gemini_util.install_irods_Certs(pruned_GN_Nodes,pKey,irods_proxycert_file)
 
 	if(not gemini_util.DISABLE_ACTIVE):
 		msg = "Creating BLiPP service configurations, sending to UNIS for nodes at "+my_manager
@@ -387,8 +385,7 @@ gn_ms_proxycert_file = None
 gn_ms_proxykey_file= None
 mp_blipp_proxycert_file = None
 mp_blipp_proxykey_file = None 
-irods_proxycert_file = None
-(gn_ms_proxycert_file,gn_ms_proxykey_file,mp_blipp_proxycert_file,mp_blipp_proxykey_file,irods_proxycert_file) = gemini_util.generate_all_proxycerts(slice_lifetime,slice_uuid)
+(gn_ms_proxycert_file,gn_ms_proxykey_file,mp_blipp_proxycert_file,mp_blipp_proxykey_file) = gemini_util.generate_all_proxycerts(slice_lifetime,slice_uuid)
 proclist = []
 results = []
 unis_topo = {}
@@ -448,7 +445,7 @@ for result in results:
 		DONE = 1
 
 
-tmp_proxyfiles = [gemini_util.PROXY_CERT,gemini_util.PROXY_KEY,gn_ms_proxycert_file,gn_ms_proxykey_file,mp_blipp_proxycert_file,mp_blipp_proxykey_file,irods_proxycert_file]
+tmp_proxyfiles = [gemini_util.PROXY_CERT,gemini_util.PROXY_KEY,gn_ms_proxycert_file,gn_ms_proxykey_file,mp_blipp_proxycert_file,mp_blipp_proxykey_file]
 status = gemini_util.delete_all_temp_proxyfiles(tmp_proxyfiles)
 if(DONE):
 	msg = "Gemini Instrumentize Complete\n Go to the GeniDesktop to login"

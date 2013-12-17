@@ -1157,21 +1157,6 @@ def generate_all_proxycerts(lifetime,auth_uuid):
 
 	global passphrase
 
-	#Irods Proxy cert generation
-	f1 = tempfile.NamedTemporaryFile(delete=False)
-	f2 = tempfile.NamedTemporaryFile(delete=False)
-        irods_proxycert_file = f1.name
-        irods_proxykey_file = f2.name
-
-	write_to_log("Generating proxy certificate for Irods service",printtoscreen)
-	genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,irods_proxycert_file,irods_proxykey_file,"",lifetime,passphrase)
-	f2.seek(0)
-	f1.seek(0,2)
-	f1.write("\n"+f2.read())
-	f1.flush()
-
-	os.remove(irods_proxykey_file)
-
 	#GN Proxy Cert generation for Active services
 	f3 = tempfile.NamedTemporaryFile(delete=False)
 	f4 = tempfile.NamedTemporaryFile(delete=False)
@@ -1209,7 +1194,31 @@ def generate_all_proxycerts(lifetime,auth_uuid):
 	f.close()
 	os.remove(mp_blipp_proxyder_file)
 
-	return (gn_ms_proxycert_file,gn_ms_proxykey_file,mp_blipp_proxycert_file,mp_blipp_proxykey_file,irods_proxycert_file)
+	return (gn_ms_proxycert_file,gn_ms_proxykey_file,mp_blipp_proxycert_file,mp_blipp_proxykey_file)
+
+def generate_irods_proxycert(lifetime):
+
+	global passphrase
+
+	#Irods Proxy cert generation
+	f1 = tempfile.NamedTemporaryFile(delete=False)
+	f2 = tempfile.NamedTemporaryFile(delete=False)
+        irods_proxycert_file = f1.name
+        irods_proxykey_file = f2.name
+
+	write_to_log("Generating proxy certificate for Irods service",printtoscreen)
+	genproxy.make_proxy_cert(CERTIFICATE,CERTIFICATE,irods_proxycert_file,irods_proxykey_file,"",lifetime,passphrase)
+	f2.seek(0)
+	f1.seek(0,2)
+	f1.write("\n"+f2.read())
+	f1.flush()
+
+	os.remove(irods_proxykey_file)
+
+	return (irods_proxycert_file)
+
+
+
 
 def delete_all_temp_proxyfiles(files):
 
@@ -1228,11 +1237,15 @@ def install_irods_Certs(GN_Nodes,pKey,proxycert_file):
 		vid = node['nodeid']
 
 		write_to_log("Installing Irods proxy certificate on "+vid,printtoscreen)
+		GN_IRODS_CERT   = '~/.irods/'+username+'-irods-proxy.pem'
 
-		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'scp',None,proxycert_file,'/tmp/'+os.path.basename(proxycert_file))
+		#(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'scp',None,proxycert_file,'/tmp/'+os.path.basename(proxycert_file))
+		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'scp',None,proxycert_file,username+'-irods-proxy.pem')
 		write_to_processlog(out_ssh,err_ssh)
 	
-		cmd = 'sudo install -D /tmp/'+os.path.basename(proxycert_file)+' '+GN_IRODS_CERT+' -o root -g root -m 600;'
+		#cmd = 'sudo install -D /tmp/'+os.path.basename(proxycert_file)+' '+GN_IRODS_CERT+' -o root -g root -m 600;'
+		#cmd = 'install -D ~/'+username+'-irods-proxy.pem '+GN_IRODS_CERT+' -o root -g root -m 600;'
+		cmd = 'mkdir -p .irods;mv '+username+'-irods-proxy.pem ~/.irods/;chmod 600 '+GN_IRODS_CERT+';sudo -H chown root:root ~/.irods/'+username+'-irods-proxy.pem;'
 		(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd,None,None)
 		write_to_processlog(out_ssh,err_ssh)
 	pass
@@ -2017,6 +2030,6 @@ def isValidURNs(urnlist):
 	urns = urnlist.split(',')
 	for urn in urns:
 		plus_splits = urn.split('+')
-		if (len(plus_splits) != 4 or plus_splits[0] != 'urn:publicid:IDN' or plus_splits[2] != 'authority' or (plus_splits[3] != 'am' and plus_splits[3] != 'cm')):
+		if (len(plus_splits) != 4 or plus_splits[0] != 'urn:publicid:IDN' or plus_splits[2] != 'authority' or (plus_splits[3] != 'am' and plus_splits[3] != 'cm' and plus_splits[3] != 'sa')):
 			return False
 	return True
