@@ -206,11 +206,17 @@ msg = "Found Slice Info for "+SLICEURN
 gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 slice_crypt = SliceInfo['crypt']
 
-if(isinstance(Nodes, basestring) or len(Nodes) == 0):
+if(isinstance(Nodes, basestring)):
 	jsonresult["status"] = "CREATED"
 	jsonresult["details"] = "No Resources Present"
 	print json.dumps(jsonresult)
 	sys.exit(0)
+if(len(Nodes) == 0):
+	jsonresult["status"] = "ERROR"
+	jsonresult["details"] = "Sliver with No Resources Present.Delete it before continuing."
+	print json.dumps(jsonresult)
+	sys.exit(0)
+  
 
 for Node in Nodes:
 	nodeid = Node['nodeid']
