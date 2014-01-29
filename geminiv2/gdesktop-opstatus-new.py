@@ -206,7 +206,7 @@ msg = "Found Slice Info for "+SLICEURN
 gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 slice_crypt = SliceInfo['crypt']
 
-if(isinstance(Nodes, basestring)):
+if(isinstance(Nodes, basestring) or len(Nodes) == 0):
 	jsonresult["status"] = "CREATED"
 	jsonresult["details"] = "No Resources Present"
 	print json.dumps(jsonresult)
