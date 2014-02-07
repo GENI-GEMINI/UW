@@ -55,6 +55,7 @@ def Usage():
     -h, --help                          Show options and usage
     -n name, --slicename=name           Specify human-readable name of slice
     -r PROJECT, --project=PROJECT	Name of project. (For use with portal framework.)
+    --disable_active                    Disable IU Active Measurement Install
     --force_refresh                     Force fetch all user/slice/sliver info rather than using locally cached version
     --devel	                        Use Development version [only for developers]"""
 
@@ -149,7 +150,7 @@ def InstrumentizeProcess(my_manager,pruned_GN_Nodes,pruned_MP_Nodes,q):
 
 try:
     opts, REQARGS = getopt.gnu_getopt( sys.argv[ 1: ], "dhk:f:n:p:r:a:",
-                                   [ "debug","help","force_refresh","pkey=","certificate=",
+                                   [ "debug","help","force_refresh","disable_active","pkey=","certificate=",
                                      "slicename=","devel","passphrase=","project=","amurns="] )
 except getopt.GetoptError, err:
     print >> sys.stderr, str( err )
@@ -167,6 +168,8 @@ for opt, arg in opts:
 	gemini_util.INSTOOLS_repo_url = gemini_util.mc_repo_rooturl+"GEMINI/"+gemini_util.version+"/"
     elif opt == "--force_refresh":
         force_refresh = True
+    elif opt == "--disable_active":
+        gemini_util.DISABLE_ACTIVE = True
     elif opt in ( "-r", "--project"):
 	project = arg
     elif opt in ( "-a", "--amurns"):

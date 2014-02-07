@@ -6,17 +6,23 @@ According to the GEMINI design, we require you to add an additional node per agg
 
 When building an rspec , please declare this extension in the root rspec tag 
 
+xmlns:color="http://geni.net/resources/rspec/ext/color/2"
 xmlns:gemini="http://geni.net/resources/rspec/ext/gemini/1"
 
 
 For every MP node in your rspec , please add the below extension inside the node tag
-
-    <gemini:node type="mp_node" xmlns="http://geni.net/resources/rspec/ext/gemini/1">
-      <gemini:services>
-        <gemini:active install="yes" enable="yes"/>
-        <gemini:passive install="yes" enable="yes"/>
-      </gemini:services>
-    </gemini:node>
+   <color:resource_color color="gemini">
+     <color:xmlblob >
+      <color:blob>
+       <gemini:node type="mp_node">
+         <gemini:services>
+           <gemini:active install="yes" enable="yes"/>
+           <gemini:passive install="yes" enable="yes"/>
+         </gemini:services>
+       </gemini:node>
+      </color:blob>
+     </color:xmlblob >
+   </color:resource_color>
 
 For each aggregate or AM used in your slice, please add a Global Node
 
@@ -27,59 +33,89 @@ The GN node should use a publicy routable IP Address.
 
 For each GN Node in your slice add the section 
 
-    <gemini:node type="global_node" xmlns="http://geni.net/resources/rspec/ext/gemini/1">
-      <gemini:monitor_urn name=COMPONENET_MANAGER_ID />
-    </gemini:node>
+   <color:resource_color color="gemini">
+     <color:xmlblob >
+      <color:blob>
+       <gemini:node type="global_node">
+        <gemini:monitor_urn name=COMPONENET_MANAGER_ID />
+       </gemini:node>
+      </color:blob>
+     </color:xmlblob >
+   </color:resource_color>
 where COMPONENT_MANAGER_ID is the component manager ID of the AM whose MP Nodes you are planning to monitor.
 
 Below is sample rspec using these extension for a slice at IG-KY and IG-Utah
 
 ****************************************************************************
-<rspec type="request" xsi:schemaLocation="http://www.geni.net/resources/rspec/3 http://www.geni.net/resources/rspec/3/request.xsd " xmlns:flack="http://www.protogeni.net/resources/rspec/ext/flack/1" xmlns:client="http://www.protogeni.net/resources/rspec/ext/client/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.geni.net/resources/rspec/3">
+<rspec type="request" xsi:schemaLocation="http://www.geni.net/resources/rspec/3 http://www.geni.net/resources/rspec/3/request.xsd " xmlns:gemini="http://geni.net/resources/rspec/ext/gemini/1" xmlns:color="http://geni.net/resources/rspec/ext/color/2"  xmlns:flack="http://www.protogeni.net/resources/rspec/ext/flack/1" xmlns:client="http://www.protogeni.net/resources/rspec/ext/client/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.geni.net/resources/rspec/3">
   <node client_id="VM" component_manager_id="urn:publicid:IDN+lan.sdn.uky.edu+authority+cm" exclusive="false" xmlns:gemini="http://geni.net/resources/rspec/ext/gemini/1">
-    <gemini:node type="mp_node" xmlns="http://geni.net/resources/rspec/ext/gemini/1">
-      <gemini:services>
-        <gemini:active install="yes" enable="yes"/>
-        <gemini:passive install="yes" enable="yes"/>
-      </gemini:services>
-    </gemini:node>
+   <color:resource_color color="gemini">
+     <color:xmlblob >
+      <color:blob>
+       <gemini:node type="mp_node">
+         <gemini:services>
+           <gemini:active install="yes" enable="yes"/>
+           <gemini:passive install="yes" enable="yes"/>
+         </gemini:services>
+       </gemini:node>
+      </color:blob>
+     </color:xmlblob >
+   </color:resource_color>
     <sliver_type name="emulab-openvz">
-      <disk_image url="https://www.uky.emulab.net/image_metadata.php?uuid=dd9e3426-708a-11e2-959f-0013468d3dc8"/>
+      <disk_image name="https://www.uky.emulab.net/image_metadata.php?uuid=dd9e3426-708a-11e2-959f-0013468d3dc8"/>
     </sliver_type>
     <interface client_id="VM:if0">
       <ip address="192.168.1.2" netmask="255.255.255.0" type="ipv4"/>
     </interface>
   </node>
   <node client_id="VM-0" component_manager_id="urn:publicid:IDN+utah.geniracks.net+authority+cm" exclusive="false" xmlns:gemini="http://geni.net/resources/rspec/ext/gemini/1">
-    <gemini:node type="mp_node" xmlns="http://geni.net/resources/rspec/ext/gemini/1">
-      <gemini:services>
-        <gemini:active install="yes" enable="yes"/>
-        <gemini:passive install="yes" enable="yes"/>
-      </gemini:services>
-    </gemini:node>
+   <color:resource_color color="gemini">
+     <color:xmlblob >
+      <color:blob>
+       <gemini:node type="mp_node">
+        <gemini:services>
+         <gemini:active install="yes" enable="yes"/>
+         <gemini:passive install="yes" enable="yes"/>
+        </gemini:services>
+       </gemini:node>
+      </color:blob>
+     </color:xmlblob >
+   </color:resource_color>
     <sliver_type name="emulab-openvz">
-      <disk_image url="https://www.uky.emulab.net/image_metadata.php?uuid=dd9e3426-708a-11e2-959f-0013468d3dc8"/>
+      <disk_image name="https://www.uky.emulab.net/image_metadata.php?uuid=dd9e3426-708a-11e2-959f-0013468d3dc8"/>
     </sliver_type>
     <interface client_id="VM-0:if0">
       <ip address="192.168.1.1" netmask="255.255.255.0" type="ipv4"/>
     </interface>
   </node>
   <node client_id="GNukyinstagenicm" component_manager_id="urn:publicid:IDN+lan.sdn.uky.edu+authority+cm" exclusive="false" xmlns:gemini="http://geni.net/resources/rspec/ext/gemini/1">
-    <gemini:node type="global_node" xmlns="http://geni.net/resources/rspec/ext/gemini/1">
-      <gemini:monitor_urn name="urn:publicid:IDN+lan.sdn.uky.edu+authority+cm"/>
-    </gemini:node>
+   <color:resource_color color="gemini">
+     <color:xmlblob >
+      <color:blob>
+       <gemini:node type="global_node">
+        <gemini:monitor_urn name="urn:publicid:IDN+lan.sdn.uky.edu+authority+cm"/>
+       </gemini:node>
+      </color:blob>
+     </color:xmlblob >
+   </color:resource_color>
     <emulab:routable_control_ip xmlns:emulab="http://www.protogeni.net/resources/rspec/ext/emulab/1"/>
     <sliver_type name="emulab-openvz">
-      <disk_image url="https://www.uky.emulab.net/image_metadata.php?uuid=a85c1aa7-b734-11e2-a084-0013468d3dc8"/>
+      <disk_image name="https://www.uky.emulab.net/image_metadata.php?uuid=a85c1aa7-b734-11e2-a084-0013468d3dc8"/>
     </sliver_type>
   </node>
   <node client_id="GNutahgenirackcm" component_manager_id="urn:publicid:IDN+utah.geniracks.net+authority+cm" exclusive="false" xmlns:gemini="http://geni.net/resources/rspec/ext/gemini/1">
-    <gemini:node type="global_node" xmlns="http://geni.net/resources/rspec/ext/gemini/1">
-      <gemini:monitor_urn name="urn:publicid:IDN+utah.geniracks.net+authority+cm"/>
-    </gemini:node>
+   <color:resource_color color="gemini">
+     <color:xmlblob >
+      <color:blob>
+       <gemini:node type="global_node">
+         <gemini:monitor_urn name="urn:publicid:IDN+utah.geniracks.net+authority+cm"/>
+       </gemini:node>
+      </color:blob>
+     </color:xmlblob >
+   </color:resource_color>
     <emulab:routable_control_ip xmlns:emulab="http://www.protogeni.net/resources/rspec/ext/emulab/1"/>
     <sliver_type name="emulab-openvz">
-      <disk_image url="https://www.uky.emulab.net/image_metadata.php?uuid=a85c1aa7-b734-11e2-a084-0013468d3dc8"/>
+      <disk_image name="https://www.uky.emulab.net/image_metadata.php?uuid=a85c1aa7-b734-11e2-a084-0013468d3dc8"/>
     </sliver_type>
   </node>
   <link client_id="gre-tunnel0">
@@ -90,7 +126,6 @@ Below is sample rspec using these extension for a slice at IG-KY and IG-Utah
     <property source_id="VM-0:if0" dest_id="VM:if0"/>
     <property source_id="VM:if0" dest_id="VM-0:if0"/>
     <link_type name="gre-tunnel"/>
-    <flack:link_info x="-1" y="-1" unboundVlantag="true"/>
   </link>
 </rspec>
 

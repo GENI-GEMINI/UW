@@ -79,6 +79,7 @@ ARCHIVE_CMD_FILE=measure_scripts_path+"/archive_cmd.sh"
 version="0.3"
 devel_version="0.3"
 mc_repo_rooturl="http://gemini.netlab.uky.edu/"
+parser_rooturl="https://parser.netlab.uky.edu"
 lampca = "https://unis.incntre.iu.edu/protogeni/xmlrpc/lampca"
 UNIS_URL = "https://unis.incntre.iu.edu:8443"
 INSTOOLS_repo_url = mc_repo_rooturl+"GEMINI/"+version+"/"
@@ -1442,7 +1443,7 @@ def getLampCert_n_details_FromParser(slice_crypt,user_crypt):
 	global debug
 
 	post_data = urllib.urlencode({'slice_crypt':slice_crypt, 'user_crypt':user_crypt,'debug':debug})
-	url = 'https://parser.netlab.uky.edu/getLNUinfo.php'
+	url = parser_rooturl+'/getLNUinfo.php'
 	req = urllib2.Request(url,post_data)
 	post_response = urllib2.urlopen(req)
 	post_return = post_response.read()
@@ -1454,7 +1455,7 @@ def getUserinfoFromParser(cert,passphrase):
 	global debug
 
 	post_data = urllib.urlencode({'cert':cert, 'passphrase':passphrase,'debug':debug})
-	url = 'https://parser.netlab.uky.edu/getUserinfo.php'
+	url = parser_rooturl+'/getUserinfo.php'
 	req = urllib2.Request(url,post_data)
 	post_response = urllib2.urlopen(req)
 	post_return = post_response.read()
@@ -1464,8 +1465,8 @@ def getUserinfoFromParser(cert,passphrase):
 #Obtain Sliceinfo using cryptic form of user credentials from GeniDesktop Parser
 def getSliceinfoFromParser(user_crypt,sliceurn=''):
 	global debug
-	post_data = urllib.urlencode({'user_crypt':user_crypt,'debug':debug,'sliceurn':sliceurn})
-	url = 'https://parser.netlab.uky.edu/getSliceinfo.php'
+	post_data = urllib.urlencode({'user_crypt':user_crypt,'debug':debug,'sliceurn':sliceurn,'project':''})
+	url = parser_rooturl+'/getSliceinfo.php'
 	req = urllib2.Request(url,post_data)
 	post_response = urllib2.urlopen(req)
 	post_return = post_response.read()
@@ -1476,7 +1477,7 @@ def clearUserinfoatParser(user_crypt):
 	global debug
 
 	post_data = urllib.urlencode({'user_crypt':user_crypt,'debug':debug})
-	url = 'https://parser.netlab.uky.edu/clearUserinfo.php'
+	url = parser_rooturl+'/clearUserinfo.php'
 	req = urllib2.Request(url,post_data)
 	post_response = urllib2.urlopen(req)
 	post_return = post_response.read()
@@ -1486,7 +1487,7 @@ def clearUserinfoatParser(user_crypt):
 def getJSONManifestFromParser(slice_crypt,sliceurn,userurn,user_crypt,api,am_urns):
 	global debug
 	post_data = urllib.urlencode({'key':slice_crypt,'sliceurn':sliceurn,'userurn':userurn,'user_key':user_crypt,'api':api,'debug':debug,'am_urns':am_urns})
-	url = 'https://parser.netlab.uky.edu/parseManifest.php'
+	url = parser_rooturl+'/parseManifest.php'
 	req = urllib2.Request(url,post_data)
 	post_response = urllib2.urlopen(req)
 	post_return = post_response.read()
