@@ -52,19 +52,20 @@ import json
 import genproxy         # Import certificate generation routines
 
 UNIS_SCHEMAS = {
-    'networkresource': 'http://unis.incntre.iu.edu/schema/20120709/networkresource#',
-    'node': 'http://unis.incntre.iu.edu/schema/20120709/node#',
-    'domain': 'http://unis.incntre.iu.edu/schema/20120709/domain#',
-    'port': 'http://unis.incntre.iu.edu/schema/20120709/port#',
-    'link': 'http://unis.incntre.iu.edu/schema/20120709/link#',
-    'path': 'http://unis.incntre.iu.edu/schema/20120709/path#',
-    'network': 'http://unis.incntre.iu.edu/schema/20120709/network#',
-    'topology': 'http://unis.incntre.iu.edu/schema/20120709/topology#',
-    'service': 'http://unis.incntre.iu.edu/schema/20120709/service#',
-    'blipp': 'http://unis.incntre.iu.edu/schema/20120709/blipp#',
-    'metadata': 'http://unis.incntre.iu.edu/schema/20120709/metadata#',
-    'datum': 'http://unis.incntre.iu.edu/schema/20120709/datum#',
-    'data': 'http://unis.incntre.iu.edu/schema/20120709/data#'
+    'networkresource': 'http://unis.incntre.iu.edu/schema/20140214/networkresource#',
+    'node': 'http://unis.incntre.iu.edu/schema/20140214/node#',
+    'domain': 'http://unis.incntre.iu.edu/schema/20140214/domain#',
+    'port': 'http://unis.incntre.iu.edu/schema/20140214/port#',
+    'link': 'http://unis.incntre.iu.edu/schema/20140214/link#',
+    'path': 'http://unis.incntre.iu.edu/schema/20140214/path#',
+    'network': 'http://unis.incntre.iu.edu/schema/20140214/network#',
+    'topology': 'http://unis.incntre.iu.edu/schema/20140214/topology#',
+    'service': 'http://unis.incntre.iu.edu/schema/20140214/service#',
+    'blipp': 'http://unis.incntre.iu.edu/schema/20140214/blipp#',
+    'metadata': 'http://unis.incntre.iu.edu/schema/20140214/metadata#',
+    'datum': 'http://unis.incntre.iu.edu/schema/20140214/datum#',
+    'data': 'http://unis.incntre.iu.edu/schema/20140214/data#',
+    'measurement': 'http://unis.incntre.iu.edu/schema/20140214/measurement#'
 }
 
 #globals 
