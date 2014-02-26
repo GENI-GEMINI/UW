@@ -603,17 +603,18 @@ def InstallGN_Passive(GN_Node,pKey):
 	username = GN_Node['login_username']
 	vid = GN_Node['nodeid']
 
-	cmd1 ="cd /tmp/;sudo rm -rf /tmp/GDESKTOP_SETUP.* /tmp/gdesktop-*;wget "+INSTOOLS_repo_url+"tarballs/GDESKTOP_SETUP.tgz;tar xzf /tmp/GDESKTOP_SETUP.tgz;"
-	cmd2 ="sudo /tmp/GDESKTOP_SETUP.sh GN install &"
+	cmd1 ="cd /tmp/;sudo rm -rf /tmp/GDESKTOP_SETUP.* /tmp/gdesktop-*;wget "+INSTOOLS_repo_url+"tarballs/GDESKTOP_SETUP.tgz;tar xzf /tmp/GDESKTOP_SETUP.tgz;"+'sudo nohup bash -c " /tmp/GDESKTOP_SETUP.sh GN install > /dev/null 2>&1 &"' 
+#	cmd2 ="sudo /tmp/GDESKTOP_SETUP.sh GN install &"
+#	cmd2 = 'sudo nohup bash -c " /tmp/GDESKTOP_SETUP.sh GN install > /dev/null 2>&1 &"' 
 
 #	msg = "Starting the Global Node Software Intallation..."
 #	write_to_log(msg,printtoscreen)
 	post_cmd = "sudo touch /var/emulab/boot/isGemini;"
 	
-	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',cmd1+post_cmd,None,None)
+	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',post_cmd+cmd1,None,None)
 	write_to_processlog(out_ssh,err_ssh)
-	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh_GN',cmd2,None,None)
-	write_to_processlog(out_ssh,err_ssh)
+#	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh_GN',cmd2,None,None)
+#	write_to_processlog(out_ssh,err_ssh)
 #	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',post_cmd,None,None)
 #	write_to_processlog(out_ssh,err_ssh)
 	return 
