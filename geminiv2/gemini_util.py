@@ -1573,16 +1573,17 @@ def sshConnection(hostname,port,username,pkey_object,what_to_do,cmd=None,localFi
 	serr = ''
 	sout = ''
 	ret_code = -100
-	allow_agent=True
-	look_for_keys=True
-	compress=False
+	allow_agent=False
+	look_for_keys=False
+	compress=True
+	ssh_timeout = 60.0
 	ssh = paramiko.SSHClient()
 	ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-	tries = 0
-	
+	tries = 0 	
+
 	while(1):
 		try:
-			ssh.connect(hostname,int(port),username,passphrase,pkey_object,key_filename,60.0, allow_agent, look_for_keys, compress)
+			ssh.connect(hostname,int(port),username,passphrase,pkey_object,key_filename,ssh_timeout, allow_agent, look_for_keys, compress)
 			break
 		except paramiko.AuthenticationException:
 			serr = "Authentication for "+hostname+' at port '+port+" Failed"
@@ -1592,24 +1593,37 @@ def sshConnection(hostname,port,username,pkey_object,what_to_do,cmd=None,localFi
 			serr = "Hostname "+hostname+" does not exist"
 			ret_code = -1
 		except socket.timeout:
-			serr = "Hostname "+hostname+" is not responding at port "+port
+			serr = "Hostname "+hostname+" is not responding (timeout) at port "+port
 			ret_code = -1
 		except socket.error:
-			serr = "Hostname "+hostname+" is not responding at port "+port
+			serr = "Hostname "+hostname+" is not responding (socket error) at port "+port
 			ret_code = -1
 		except AssertionError:
-			print "Some Assert error. Will try again in 5 seconds"
+			print "Some Assert error for hostname: "+hostname+" at port "+port+". Will try again in 5 seconds"
 			time.sleep(5)
 			continue
-			
-		if(tries >= 0):
+		except paramiko.SSHException as sshe:
+			if (sshe.message == "Error reading SSH protocol banner"):
+				print "Weird SSH protocol banner Error for hostname: "+hostname+" at port "+port+". Will try again in 5 seconds"
+				time.sleep(5)
+				continue
+			else:
+				serr = "Hostname "+hostname+" at port "+port+" has this SSHException error"+sshe.message+". Will not proceed. PLease Investigate"
+				ret_code = -1
+		except Exception as ex:
+			template = "An exception of type {0} occured. Arguments:\n{1!r}"
+			serr = template.format(type(ex).__name__, ex.args)
+			ret_code = -1
+
+		# With a sleep of 15 sec this will be about a total of 2 minute wait
+		if(tries >= 8):
 			ssh.close()
 			print "tries is done"
 			return (sout,serr,int(ret_code))
 		else:
 			print serr+" \nWill try again in 15 seconds"
 			tries = tries + 1
-#			time.sleep(15)
+			time.sleep(15)
 	if(what_to_do == 'scp'):
 		ftp = ssh.open_sftp()
 		ftp.put(localFile,remoteFile)
