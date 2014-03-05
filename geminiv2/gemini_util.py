@@ -1358,6 +1358,8 @@ def getUnencryptedKeyfile(cert_pKey):
 	return TKF.name
 
 def getUNISTopo(key,cert,endpoint):
+
+	global DISABLE_ACTIVE
 	url = UNIS_URL
 	o = urlparse.urlparse(url)
 	topo = None
@@ -1411,7 +1413,9 @@ def getUNISTopo(key,cert,endpoint):
 	except Exception as e:
 		msg = "Could not get UNIS topology: %s" % e
 		write_to_log(msg,printtoscreen)
-			
+		msg = "Active Services will be disabled to continue with the Instrumentation process"
+		write_to_log(msg,printtoscreen)
+		DISABLE_ACTIVE = True
 	return topo
 	
 #POST some data to specified UNIS endpoints
