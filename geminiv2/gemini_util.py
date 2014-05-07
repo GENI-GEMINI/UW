@@ -1956,14 +1956,24 @@ def getMyExpInfo(CERT_ISSUER,username,cert_string,project,force_refresh,AMURNS):
 	slice_crypt = SliceInfo['crypt']
 
 
-    #Make sure the slivers are ready first
-    (msg,result) = findSliverStatus(slice_crypt,user_crypt,AMURNS)
-    if(not result):
-	    jsonresult["status"] = "ERROR"
-    	jsonresult['details'] = msg
-    	msg = json.dumps(jsonresult)
-		write_to_log(msg,printtoscreen)
-    	sys.exit(1)
+	#Make sure the slivers are ready first
+	(msg,result,details) = findSliverStatus(slice_crypt,user_crypt,AMURNS)
+	if(not result):
+		jsonresult = {}
+		jsonresult["status"] = "ERROR"
+		jsonresult["details"] = "Sliverstatus reported Failed : "+msg
+		print json.dumps(jsonresult)
+		sys.exit(0)
+
+	if(msg == 'no_slivers'):
+		jsonresult = {}
+		jsonresult["status"] = "CREATED"
+		jsonresult["details"] = "No Resources Present"
+		print json.dumps(jsonresult)
+		sys.exit(0)
+	elif(AMURNS == ''):
+		AMURNS = getAMListFromSliverStatus(details)
+
 
 	api = "getNodeInfo"
 	if(force_refresh):
@@ -2016,10 +2026,12 @@ def findSliverStatus(slice_crypt,user_crypt,AM_URN):
 	result = False
 	tries = 0
 	msg = ''
+	details = []
 
 	while(tries < 40 ): #dont loop for more than 10 minutes
 		#loop until the sliver status is ready again
 		STATUS_JSON = getSliverStatus(slice_crypt,user_crypt,AM_URN)
+		write_to_log(str(STATUS_JSON),dontprinttoscreen)
 		try:
 			STATUS = json.loads(STATUS_JSON)
 		except ValueError:
@@ -2030,6 +2042,11 @@ def findSliverStatus(slice_crypt,user_crypt,AM_URN):
 		if(STATUS['code'] == 0):
 			if(STATUS['output'] == 'ready'):
 				result = True
+				details = STATUS['details']
+				break
+			elif(STATUS['output'] == 'no_slivers'):
+				result = True
+				msg = "no_slivers"
 				break
 			elif(STATUS['output'] == 'failed'):
 				msg = "SliverStatus reports our slivers at "+AM_URN+" failed"
@@ -2046,7 +2063,7 @@ def findSliverStatus(slice_crypt,user_crypt,AM_URN):
 			result = False
 			break
 
-	return msg,result
+	return msg,result,details
 
 def addGDAccesstoSlivers(slice_crypt,user_crypt,AM_URN):
 
@@ -2066,7 +2083,7 @@ def addGDAccesstoSlivers(slice_crypt,user_crypt,AM_URN):
 				if(isGDAccessEnabled['output']['just_added']):
 					msg = "GeniDesktop Tool access was just added to your slivers at "+AM_URN+".\nWaiting for the slivers to become ready again\n"
 				       	write_to_log(msg,printtoscreen)
-					(msg,result) = findSliverStatus(slice_crypt,user_crypt,AM_URN)
+					(msg,result,junk) = findSliverStatus(slice_crypt,user_crypt,AM_URN)
 				       	write_to_log(msg,printtoscreen)
 				else:
 					msg = "GeniDesktop Tool already had access to your slivers at "+AM_URN+".\n"
@@ -2082,3 +2099,13 @@ def addGDAccesstoSlivers(slice_crypt,user_crypt,AM_URN):
 		result = False
 
 	return msg,result
+
+def getAMListFromSliverStatus(SliverStatusDetails):
+
+	am_list = ''
+
+	for sliver_detail in SliverStatusDetails:
+		if(sliver_detail['status'] != 'no_slivers'):
+			am_list = am_list+','+sliver_detail['urn']
+	
+	return am_list.strip(',')
