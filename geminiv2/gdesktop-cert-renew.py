@@ -174,6 +174,9 @@ if(not found):
 msg = "Found Slice Info for "+SLICEURN
 gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 slice_crypt = SliceInfo['crypt']
+expiry = SliceInfo['expires']
+slice_uuid = SliceInfo['uuid']
+
 
 if(isinstance(Nodes, basestring)):
 	msg = Nodes+": No Manifest Available for : "+ SliceInfo['sliceurn']
@@ -186,10 +189,10 @@ for Node in Nodes:
 	hostname = Node['hostname']
 	ismc = Node['ismc']
 	login_hostname = Node['login_hostname']
-        if( Node['login_username'] != username):
+    if( Node['login_username'] != username):
 		msg = "Login Username obtained from manifest is "+Node['login_username']+ " for node "+nodeid+". Will change it to "+username+" for GEMINI Instrumentation setup"
-                gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-                Node['login_username'] = username
+        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+        Node['login_username'] = username
 	login_username = Node['login_username']
 	login_port = Node['login_port']
 	mchostname = Node['mchostname']
@@ -224,48 +227,35 @@ gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 
 if (len(GN_Nodes) == 0):
 	msg = "No GN Nodes Present. Will not proceed"
-        gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+    gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
-
-msg = "Fetching Lamp Certificate and other information from the GeniDesktop Parser"
+msg = "Registering Slice with UNIS and posting Manifests to UNIS"
 gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-LAMPJSON = gemini_util.getLampCert_n_details_FromParser(slice_crypt,user_crypt)
+REGUNISJSON = gemini_util.register_experiment_with_UNIS(slice_crypt,user_crypt)
 try:
-	LAMPOBJ = json.loads(LAMPJSON)
-	gemini_util.write_to_log(LAMPJSON,gemini_util.dontprinttoscreen)
+	REGUNISOBJ = json.loads(REGUNISJSON)
+	gemini_util.write_to_log(REGUNISJSON,gemini_util.dontprinttoscreen)
 except ValueError:
-	msg ="LAMP Info JSON Loading Error"
+	msg ="REGUNIS Info JSON Loading Error"
 	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
-slice_uuid = ''
-slicecred = ''
-expiry = ''
-LAMPCERT = ''
-if (LAMPOBJ['code'] == 0):
-	LampInfo = LAMPOBJ['output']
-	slicecred = LampInfo['credential']
-	expiry = LampInfo['expiry']
-	slice_uuid = LampInfo['uuid']
-	LAMPCERT = LampInfo['lampcert']
-else:
-	msg = "Error obtaining Lamp Info : "+ LAMPOBJ['output']
+if (REGUNISOBJ['code'] != 0):
+	msg = "GeniDesktop to UNIS registration Error : "+ REGUNISOBJ['output']
 	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-	sys.exit(1)
-
-if(LAMPCERT == ''):
-	msg = "Lamp Certificate was Not Found. Some services may not work correctly"
+	msg = "Active Services will be disabled to continue with the Instrumentation process"
 	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+	gemini_util.DISABLE_ACTIVE = True
 
 
-SLICECRED_FOR_LAMP = slicecred.replace('<?xml version="1.0" encoding="UTF-8" standalone="no"?>','',1).lstrip()
+
 slice_lifetime = {}
 if (slice_uuid):
-        expiration = datetime.datetime.strptime(expiry,"%Y-%m-%dT%H:%M:%SZ")
-        now = datetime.datetime.now(expiration.tzinfo)
-        td = expiration - now
-        slice_lifetime = int(td.seconds + td.days * 24 * 3600)
+	expiration = datetime.datetime.strptime(expiry,"%Y-%m-%dT%H:%M:%SZ")
+	now = datetime.datetime.now(expiration.tzinfo)
+	td = expiration - now
+	slice_lifetime = int(td.seconds + td.days * 24 * 3600)
 	validity = datetime.timedelta(seconds=slice_lifetime)
 	slice_lifetime = validity.days + 1
 	#Now setup a proxy cert for the instrumentize script so we can talk to UNIS without keypass
@@ -277,22 +267,6 @@ if (slice_uuid):
 		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 		gemini_util.DISABLE_ACTIVE = True
 
-	# temporary hack to write out an unencrypted keyfile for the slice registration call to UNIS
-	TEMP_KEYFILE = gemini_util.getUnencryptedKeyfile(CERT_pkey)
-	msg="Registering slice credential with Global UNIS"
-	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-	res1 = gemini_util.postDataToUNIS(TEMP_KEYFILE,gemini_util.CERTIFICATE,"/credentials/genislice",slicecred)
-	os.remove(TEMP_KEYFILE)
-	f = open(gemini_util.PROXY_ATTR)
-	res2 = gemini_util.postDataToUNIS(gemini_util.PROXY_KEY,gemini_util.PROXY_CERT,"/credentials/geniuser",f)
-	f.close()
-	os.remove(gemini_util.PROXY_ATTR)
-	if res1 or res2 is None:
-		msg="Failed to register slice credential"
-		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-		msg = "Active Services will be disabled to continue with the Instrumentation process"
-		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-		gemini_util.DISABLE_ACTIVE = True
 else:
 	msg = "Could not get slice UUID from slice credential. GEMINI Services may fail."
 	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
@@ -304,10 +278,6 @@ mp_blipp_proxycert_file = None
 mp_blipp_proxykey_file = None 
 (gn_ms_proxycert_file,gn_ms_proxykey_file,mp_blipp_proxycert_file,mp_blipp_proxykey_file) = gemini_util.generate_all_proxycerts(slice_lifetime,slice_uuid)
 
-lpc = tempfile.NamedTemporaryFile()
-cert_file = lpc.name
-lpc.write(LAMPCERT)
-lpc.flush()
 for my_manager in managers:
 
 	# STEP 1: Check nodes for OS Compatibilty
@@ -328,14 +298,6 @@ for my_manager in managers:
 	if(not gemini_util.DISABLE_ACTIVE):
 		gemini_util.install_GN_Certs(pruned_GN_Nodes,pKey,gn_ms_proxycert_file,gn_ms_proxykey_file)
 		gemini_util.install_MP_Certs(pruned_MP_Nodes,pKey,mp_blipp_proxycert_file,mp_blipp_proxykey_file)
-
-	cmd = "sudo cp /var/emulab/boot/lampcert.pem /usr/local/etc/protogeni/ssl/lampcert.pem;"
-	for node in pruned_GN_Nodes:
-		add_cmd = "sudo /etc/init.d/httpd reload;"
-		gemini_util.installLAMPCert(node,pKey,cert_file,cmd+add_cmd)
-	
-	for node in pruned_MP_Nodes:
-		gemini_util.installLAMPCert(node,pKey,cert_file,cmd)
 
 	DONE=1
 

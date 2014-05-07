@@ -69,7 +69,6 @@ def InstrumentizeProcess(my_manager,pruned_GN_Nodes,pruned_MP_Nodes,q):
 	global USERURN
 	global SLICEURN
 	global slice_uuid
-	global LAMPCERT
 	global unis_topo
 
 	# This lock will also install sftware needed for Passive measurements on GN which cannot be done in parallel
@@ -113,9 +112,9 @@ def InstrumentizeProcess(my_manager,pruned_GN_Nodes,pruned_MP_Nodes,q):
 	gemini_util.vnc_passwd_create(pruned_MP_Nodes,pruned_GN_Nodes[0],pKey)
 	gemini_util.drupal_account_create(pruned_GN_Nodes[0],pKey)
 
-	msg = "Installing Proxy Certificates for nodes at "+my_manager
-	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	if(not gemini_util.DISABLE_ACTIVE):
+		msg = "Installing Proxy Certificates for nodes at "+my_manager
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 		gemini_util.install_GN_Certs(pruned_GN_Nodes,pKey,gn_ms_proxycert_file,gn_ms_proxykey_file)
 		gemini_util.install_MP_Certs(pruned_MP_Nodes,pKey,mp_blipp_proxycert_file,mp_blipp_proxykey_file)
 
@@ -126,7 +125,8 @@ def InstrumentizeProcess(my_manager,pruned_GN_Nodes,pruned_MP_Nodes,q):
 
 		msg = "Installing and configuring MP Nodes for Active Measurements at "+my_manager
 		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-		gemini_util.install_Active_measurements(pruned_MP_Nodes,pruned_GN_Nodes[0],USERURN,SLICEURN,slice_uuid,unis_topo[my_manager],LAMPCERT,pKey)
+		#gemini_util.install_Active_measurements(pruned_MP_Nodes,pruned_GN_Nodes[0],USERURN,SLICEURN,slice_uuid,unis_topo[my_manager],LAMPCERT,pKey)
+		gemini_util.install_Active_measurements(pruned_MP_Nodes,pruned_GN_Nodes[0],USERURN,SLICEURN,slice_uuid,unis_topo[my_manager],pKey)
 	gemini_util.initialize_Drupal_menu(pruned_GN_Nodes[0],pKey)
 
 	# This is just to make sure we have the right user info who instrumented the slice
@@ -169,6 +169,7 @@ for opt, arg in opts:
     elif opt == "--force_refresh":
         force_refresh = True
     elif opt == "--disable_active":
+	print "User requested to disable Active Measurements setup"
         gemini_util.DISABLE_ACTIVE = True
     elif opt in ( "-r", "--project"):
 	project = arg
@@ -252,6 +253,7 @@ for  SliceInfo in Slices:
 	(junk,slicename_from_parser) = SliceInfo['sliceurn'].rsplit('+',1)
 	if (gemini_util.SLICENAME == slicename_from_parser):
 		SLICEURN =  SliceInfo['sliceurn']
+
 		found = True
 		break
 
@@ -263,6 +265,8 @@ if(not found):
 msg = "Found Slice Info for "+SLICEURN
 gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 slice_crypt = SliceInfo['crypt']
+expiry = SliceInfo['expires']
+slice_uuid = SliceInfo['uuid']
 
 if(isinstance(Nodes, basestring)):
 	msg = Nodes+": No Manifest Available for : "+ SliceInfo['sliceurn']
@@ -317,78 +321,69 @@ if (len(GN_Nodes) == 0):
         gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	sys.exit(1)
 
-msg = "Fetching Lamp Certificate and other information from the GeniDesktop Parser"
-gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-LAMPJSON = gemini_util.getLampCert_n_details_FromParser(slice_crypt,user_crypt)
-try:
-	LAMPOBJ = json.loads(LAMPJSON)
-	gemini_util.write_to_log(LAMPJSON,gemini_util.dontprinttoscreen)
-except ValueError:
-	msg ="LAMP Info JSON Loading Error"
+if(not gemini_util.DISABLE_ACTIVE):
+	msg = "Registering Slice with UNIS and posting Manifests to UNIS"
 	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-	sys.exit(1)
+	REGUNISJSON = gemini_util.register_experiment_with_UNIS(slice_crypt,user_crypt)
+	try:
+		REGUNISOBJ = json.loads(REGUNISJSON)
+		gemini_util.write_to_log(REGUNISJSON,gemini_util.dontprinttoscreen)
+	except ValueError:
+		msg ="REGUNIS Info JSON Loading Error"
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+		sys.exit(1)
 
-slice_uuid = ''
-slicecred = ''
-expiry = ''
-LAMPCERT = ''
-if (LAMPOBJ['code'] == 0):
-	LampInfo = LAMPOBJ['output']
-	slicecred = LampInfo['credential']
-	expiry = LampInfo['expiry']
-	slice_uuid = LampInfo['uuid']
-	LAMPCERT = LampInfo['lampcert']
-else:
-	msg = "Error obtaining Lamp Info : "+ LAMPOBJ['output']
-	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-	sys.exit(1)
-
-
-if(LAMPCERT == ''):
-	msg = "Lamp Certificate was Not Found. Some services may not work correctly"
-	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-
-SLICECRED_FOR_LAMP = slicecred.replace('<?xml version="1.0" encoding="UTF-8" standalone="no"?>','',1).lstrip()
-slice_lifetime = {}
-if (slice_uuid):
-	expiration = datetime.datetime.strptime(expiry,"%Y-%m-%dT%H:%M:%SZ")
-	now = datetime.datetime.now(expiration.tzinfo)
-	td = expiration - now
-	slice_lifetime = int(td.seconds + td.days * 24 * 3600)
-	validity = datetime.timedelta(seconds=slice_lifetime)
-	slice_lifetime = validity.days + 1
-	#Now setup a proxy cert for the instrumentize script so we can talk to UNIS without keypass
-	gemini_util.makeInstrumentizeProxy(slice_lifetime,slice_uuid)
-	if not (gemini_util.PROXY_ATTR):
-		msg = "ERROR: Could not complete proxy certificate creation for instrumentize process"
+	if (REGUNISOBJ['code'] != 0):
+		msg = "GeniDesktop to UNIS registration Error : "+ REGUNISOBJ['output']
 		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 		msg = "Active Services will be disabled to continue with the Instrumentation process"
 		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 		gemini_util.DISABLE_ACTIVE = True
 
-	#Send the proxy cert to UNIS so we can use this identity to query UNIS later
-	f = open(gemini_util.PROXY_ATTR)
-	res = gemini_util.postDataToUNIS(gemini_util.PROXY_KEY,gemini_util.PROXY_CERT,"/credentials/geniuser",f)
-	f.close()
-	os.remove(gemini_util.PROXY_ATTR)
-	if res is None:
-		msg="Failed to register instrumentize proxy cert"
+if(not gemini_util.DISABLE_ACTIVE):
+	slice_lifetime = {}
+	if (slice_uuid):
+		expiration = datetime.datetime.strptime(expiry,"%Y-%m-%dT%H:%M:%SZ")
+		now = datetime.datetime.now(expiration.tzinfo)
+		td = expiration - now
+		slice_lifetime = int(td.seconds + td.days * 24 * 3600)
+		validity = datetime.timedelta(seconds=slice_lifetime)
+		slice_lifetime = validity.days + 1
+		#Now setup a proxy cert for the instrumentize script so we can talk to UNIS without keypass
+		gemini_util.makeInstrumentizeProxy(slice_lifetime,slice_uuid)
+		if not (gemini_util.PROXY_ATTR):
+			msg = "ERROR: Could not complete proxy certificate creation for instrumentize process"
+			gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+			msg = "Active Services will be disabled to continue with the Instrumentation process"
+			gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+			gemini_util.DISABLE_ACTIVE = True
+
+		#Send the proxy cert to UNIS so we can use this identity to query UNIS later
+		f = open(gemini_util.PROXY_ATTR)
+		res = gemini_util.postDataToUNIS(gemini_util.PROXY_KEY,gemini_util.PROXY_CERT,"/credentials/geniuser",f)
+		f.close()
+		os.remove(gemini_util.PROXY_ATTR)
+		if res is None:
+			msg="Failed to register instrumentize proxy cert"
+			gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+			msg = "Active Services will be disabled to continue with the Instrumentation process"
+			gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+			gemini_util.DISABLE_ACTIVE = True
+	
+	
+	else:
+		msg = "Could not get slice UUID from slice credential. GEMINI Services may fail."
 		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-		msg = "Active Services will be disabled to continue with the Instrumentation process"
-		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-		gemini_util.DISABLE_ACTIVE = True
+		sys.exit(1)
+
+	gn_ms_proxycert_file = None
+	gn_ms_proxykey_file= None
+	mp_blipp_proxycert_file = None
+	mp_blipp_proxykey_file = None 
+	(gn_ms_proxycert_file,gn_ms_proxykey_file,mp_blipp_proxycert_file,mp_blipp_proxykey_file) = gemini_util.generate_all_proxycerts(slice_lifetime,slice_uuid)
 
 
-else:
-	msg = "Could not get slice UUID from slice credential. GEMINI Services may fail."
-	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-	sys.exit(1)
 
-gn_ms_proxycert_file = None
-gn_ms_proxykey_file= None
-mp_blipp_proxycert_file = None
-mp_blipp_proxykey_file = None 
-(gn_ms_proxycert_file,gn_ms_proxykey_file,mp_blipp_proxycert_file,mp_blipp_proxykey_file) = gemini_util.generate_all_proxycerts(slice_lifetime,slice_uuid)
 proclist = []
 results = []
 unis_topo = {}
@@ -411,8 +406,8 @@ for my_manager in managers:
 	pruned_MP_Nodes = gemini_util.pruneNodes(MP_Nodes,my_manager,'')
 
 	endpoint = "/domains/%s" % (my_manager.replace('urn:publicid:IDN+','').replace('+authority+cm','')+'+slice+'+gemini_util.SLICENAME).replace('+','_')
-	#endpoint = "/domains/%s" % SLICEURN.replace('urn:publicid:IDN+','').replace('+','_')
-	unis_topo[my_manager] = gemini_util.getUNISTopo(gemini_util.PROXY_KEY,gemini_util.PROXY_CERT,endpoint)
+	if(not gemini_util.DISABLE_ACTIVE):
+		unis_topo[my_manager] = gemini_util.getUNISTopo(gemini_util.PROXY_KEY,gemini_util.PROXY_CERT,endpoint)
 
 	my_queue = multiprocessing.Queue()
 	p = multiprocessing.Process(target=InstrumentizeProcess,args=(my_manager,pruned_GN_Nodes,pruned_MP_Nodes,my_queue,))
@@ -448,8 +443,9 @@ for result in results:
 		DONE = 1
 
 
-tmp_proxyfiles = [gemini_util.PROXY_CERT,gemini_util.PROXY_KEY,gn_ms_proxycert_file,gn_ms_proxykey_file,mp_blipp_proxycert_file,mp_blipp_proxykey_file]
-status = gemini_util.delete_all_temp_proxyfiles(tmp_proxyfiles)
+if(not gemini_util.DISABLE_ACTIVE):
+	tmp_proxyfiles = [gemini_util.PROXY_CERT,gemini_util.PROXY_KEY,gn_ms_proxycert_file,gn_ms_proxykey_file,mp_blipp_proxycert_file,mp_blipp_proxykey_file]
+	status = gemini_util.delete_all_temp_proxyfiles(tmp_proxyfiles)
 if(DONE):
 	msg = "Gemini Instrumentize Complete\n Go to the GeniDesktop to login"
 	gemini_util.write_to_log(msg,gemini_util.printtoscreen)

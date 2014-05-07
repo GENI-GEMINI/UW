@@ -80,8 +80,7 @@ ARCHIVE_CMD_FILE=measure_scripts_path+"/archive_cmd.sh"
 version="0.3"
 devel_version="0.3"
 mc_repo_rooturl="http://gemini.netlab.uky.edu/"
-parser_rooturl="https://parser.netlab.uky.edu"
-lampca = "https://unis.incntre.iu.edu/protogeni/xmlrpc/lampca"
+parser_rooturl="https://parser.netlab.uky.edu/dev"
 UNIS_URL = "https://unis.incntre.iu.edu:8443"
 INSTOOLS_repo_url = mc_repo_rooturl+"GEMINI/"+version+"/"
 EXP_NODE_tmppath = "/tmp"
@@ -987,55 +986,7 @@ def random_password():
 #   characters long, made up of numbers and letters.
 	return "".join(random.choice(chars) for x in range(random.randint(8, 16)))
 
-
-# CALL LAMP python script to send MANIFEST
-def LAMP_sendmanifest(SLICEURN,manifest,LAMPCERT,SLICECRED_FOR_LAMP):
-
-	state = True
-	cred_file = ""
-	manifest_file = ""
-	lpcert_file = ""
-	old_HTTPS_CERT_FILE = ""
-	old_HTTPS_KEY_FILE = ""
-
-	f = tempfile.NamedTemporaryFile()
-	manifest_file = f.name
-	f.write(manifest)
-	f.flush()
-	if(LAMPCERT):
-		lp = tempfile.NamedTemporaryFile()
-		lpcert_file = lp.name
-		lp.write(LAMPCERT)
-		lp.flush()
-	else:
-		cred = tempfile.NamedTemporaryFile()
-		cred_file = cred.name
-		cred.write(SLICECRED_FOR_LAMP)
-		cred.flush()
-
-	msg = ""
-
-	process = subprocess.Popen(os.path.dirname(__file__)+"/lamp-sendmanifest.py "+manifest_file+" "+SLICEURN+" "+lpcert_file+" "+cred_file, shell=True,stdout=subprocess.PIPE,stdin=subprocess.PIPE,stderr=subprocess.PIPE)
-	(out,err) = process.communicate()
-	process.wait()
-	write_to_processlog(out,err)
-	try:
-		check = out.index("data element(s) successfully replaced")
-		state = True
-		msg = "Sent Manifest to the LAMP UNIS Successfully"
-		write_to_log(msg,printtoscreen)
-	except ValueError:
-		state = False
-		msg = ""
-
-	f.close
-	if(LAMPCERT):
-		lp.close
-	else:
-		cred.close
-	return state,msg
-
-def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,SLICEUUID,UNISTopo,LAMPCERT,pKey):
+def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,SLICEUUID,UNISTopo,pKey):
 
 	global EXP_NODE_tmppath
 	global INSTOOLS_repo_url
@@ -1046,13 +997,7 @@ def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,SLICEUUID,UNIS
 		msg = "Will not enable Active Services due to UNIS Failure"
 		write_to_log(msg,printtoscreen)
 		return state
-	# Place LAMP CERT on all nodes regardless in case we need it later
-	lpc = tempfile.NamedTemporaryFile()
-	cert_file = lpc.name
-	lpc.write(LAMPCERT)
-	lpc.flush()
 	proclist = []
-	#sudo install -D -g geniuser -o root -m 440 /tmp/lampcert.pem  /usr/local/etc/protogeni/ssl/
 
 	GNHOST = GN_Node['hostname']
 	UNIS_ID = findUNISNodeID(UNISTopo,GN_Node)
@@ -1063,7 +1008,7 @@ def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,SLICEUUID,UNIS
 	#Install software on GN Node regardless
 	NODE_TYPE = "GN"
 	cmd = "cd "+EXP_NODE_tmppath+";sudo rm -rf ACTIVE_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/ACTIVE_SETUP.tgz;tar xzf ACTIVE_SETUP.tgz;sudo ./ACTIVE_SETUP.sh "+NODE_TYPE+" INSTALL "+SLICEURN+" "+USERURN+" "+GNHOST+" "+SLICEUUID+" "+str(UNIS_ID)
-	p = multiprocessing.Process(target=ActiveInstall,args=(GN_Node,cmd,cert_file,pKey,))
+	p = multiprocessing.Process(target=ActiveInstall,args=(GN_Node,cmd,pKey,))
 	proclist.append(p)
 	p.start()                                                                                                                      
 	
@@ -1080,40 +1025,16 @@ def install_Active_measurements(MP_Nodes,GN_Node,USERURN,SLICEURN,SLICEUUID,UNIS
 
 		cmd = "cd "+EXP_NODE_tmppath+";sudo rm -rf ACTIVE_SETUP.*;wget "+INSTOOLS_repo_url+"tarballs/ACTIVE_SETUP.tgz;tar xzf ACTIVE_SETUP.tgz;sudo ./ACTIVE_SETUP.sh "+NODE_TYPE+" INSTALL "+SLICEURN+" "+USERURN+" "+GNHOST+" "+SLICEUUID+" "+str(UNIS_ID)
 		#Install software on MP Nodes
-	        p = multiprocessing.Process(target=ActiveInstall,args=(Node,cmd,cert_file,pKey,))
+	        p = multiprocessing.Process(target=ActiveInstall,args=(Node,cmd,pKey,))
 		proclist.append(p)
 		p.start()
         
 	for i in proclist:
 		i.join()
 
-	lpc.close
 	return state
 
-def installLAMPCert(Node,pKey,cert_file,add_cmd):
-
-	cert_dest = "/var/emulab/boot/lampcert.pem"	
-	lamp_dest = "/usr/local/etc/protogeni/ssl"
-
-	hostname = Node['login_hostname']
-	port = Node['login_port']
-	username = Node['login_username']
-	vid = Node['nodeid']
-
-	msg = "Placing the LAMP Cert on Node:\""+vid+"\""
-	write_to_log(msg,printtoscreen)
-
-	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'scp',None,cert_file,'/tmp/'+os.path.basename(cert_file))
-	write_to_processlog(out_ssh,err_ssh)
-
-	node_cmd = "sudo mv "+EXP_NODE_tmppath+"/"+os.path.basename(cert_file)+" "+cert_dest+";"
-
-	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'ssh',node_cmd+add_cmd,None,None)
-	write_to_processlog(out_ssh,err_ssh)
-	
-	return
-
-def ActiveInstall(Node,node_cmd,cert_file,pKey):
+def ActiveInstall(Node,node_cmd,pKey):
 	global EXP_NODE_tmppath
 
 	my_cmurn = Node['cmurn']
@@ -1123,12 +1044,12 @@ def ActiveInstall(Node,node_cmd,cert_file,pKey):
 	username = Node['login_username']
 	vid = Node['nodeid']
 
-	msg = "Placing the LAMP Cert on Node:\""+vid+"\" to allow it to complete setup"
-	write_to_log(msg,printtoscreen)
+#	msg = "Placing the LAMP Cert on Node:\""+vid+"\" to allow it to complete setup"
+#	write_to_log(msg,printtoscreen)
 
-	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'scp',None,cert_file,'/tmp/'+os.path.basename(cert_file))
-	write_to_processlog(out_ssh,err_ssh)
-	installLAMPCert(Node,pKey,cert_file,"")
+#	(out_ssh,err_ssh,ret_code) = sshConnection(hostname,port,username,pKey,'scp',None,cert_file,'/tmp/'+os.path.basename(cert_file))
+#	write_to_processlog(out_ssh,err_ssh)
+#	installLAMPCert(Node,pKey,cert_file,"")
 
 	msg = "Running Active Services Install Scripts on Node: \""+vid+"\""
 	write_to_log(msg,printtoscreen)
@@ -1444,12 +1365,12 @@ def postDataToUNIS(key,cert,endpoint,data):
 	else:
 		return data
 
-#Obtain Slice Credential from GeniDesktop Parser
-def getLampCert_n_details_FromParser(slice_crypt,user_crypt):
+#Register this Slice and its manifests to UNIS from GeniDesktop Parser
+def register_experiment_with_UNIS(slice_crypt,user_crypt):
 	global debug
 
 	post_data = urllib.urlencode({'slice_crypt':slice_crypt, 'user_crypt':user_crypt,'debug':debug})
-	url = parser_rooturl+'/getLNUinfo.php'
+	url = parser_rooturl+'/reg_with_unis.php'
 	req = urllib2.Request(url,post_data)
 	post_response = urllib2.urlopen(req)
 	post_return = post_response.read()
@@ -1498,6 +1419,28 @@ def getJSONManifestFromParser(slice_crypt,sliceurn,userurn,user_crypt,api,am_urn
 	post_response = urllib2.urlopen(req)
 	post_return = post_response.read()
 	return post_return
+
+def getSliverStatus(slice_crypt,user_crypt,am_urns):
+	global debug
+	post_data = urllib.urlencode({'user_crypt':user_crypt,'slice_crypt':slice_crypt,'debug':debug,'amurnlist':am_urns})
+	url = parser_rooturl+'/getSliverStatus.php'
+	req = urllib2.Request(url,post_data)
+	post_response = urllib2.urlopen(req)
+	post_return = post_response.read()
+	return post_return
+
+def addGDAccess(slice_crypt,user_crypt,am_urns):
+	global debug
+	post_data = urllib.urlencode({'user_crypt':user_crypt,'slice_crypt':slice_crypt,'debug':debug,'am_urns':am_urns})
+	url = parser_rooturl+'/addGDAccess.php'
+	req = urllib2.Request(url,post_data)
+	post_response = urllib2.urlopen(req)
+	post_return = post_response.read()
+	return post_return
+
+
+
+
 
 def getPassphraseFromFile():
 	global PASSPHRASEFILE
@@ -1952,7 +1895,6 @@ def getMyExpInfo(CERT_ISSUER,username,cert_string,project,force_refresh,AMURNS):
 		email_id = UserInfo['email']
 		USERURN = UserInfo['userurn']
 		user_crypt = UserInfo['user_crypt']
-		user_public_key = UserInfo['public_key']
 		framework = UserInfo['framework']
 	else:
 		msg = "User not identified : "+ UserOBJ['output']
@@ -1961,7 +1903,6 @@ def getMyExpInfo(CERT_ISSUER,username,cert_string,project,force_refresh,AMURNS):
 
 	msg = "Found User Info for "+USERURN
 	write_to_log(msg,printtoscreen)
-
 
 	my_sliceurn = getSliceURN(framework,USERURN,SLICENAME,project)
 	if(force_refresh):
@@ -2013,6 +1954,17 @@ def getMyExpInfo(CERT_ISSUER,username,cert_string,project,force_refresh,AMURNS):
 	msg = "Found Slice Info for "+SLICEURN
 	write_to_log(msg,printtoscreen)
 	slice_crypt = SliceInfo['crypt']
+
+
+    #Make sure the slivers are ready first
+    (msg,result) = findSliverStatus(slice_crypt,user_crypt,AMURNS)
+    if(not result):
+	    jsonresult["status"] = "ERROR"
+    	jsonresult['details'] = msg
+    	msg = json.dumps(jsonresult)
+		write_to_log(msg,printtoscreen)
+    	sys.exit(1)
+
 	api = "getNodeInfo"
 	if(force_refresh):
 		cachedNodesJSON = ''
@@ -2058,3 +2010,75 @@ def isValidURNs(urnlist):
 		if (len(plus_splits) != 4 or plus_splits[0] != 'urn:publicid:IDN' or plus_splits[2] != 'authority' or (plus_splits[3] != 'am' and plus_splits[3] != 'cm' and plus_splits[3] != 'sa')):
 			return False
 	return True
+
+def findSliverStatus(slice_crypt,user_crypt,AM_URN):
+	state = ''
+	result = False
+	tries = 0
+	msg = ''
+
+	while(tries < 40 ): #dont loop for more than 10 minutes
+		#loop until the sliver status is ready again
+		STATUS_JSON = getSliverStatus(slice_crypt,user_crypt,AM_URN)
+		try:
+			STATUS = json.loads(STATUS_JSON)
+		except ValueError:
+			msg ="SLIVERSTATUS JSON Loading Error"
+			write_to_log(msg,printtoscreen)
+			break
+
+		if(STATUS['code'] == 0):
+			if(STATUS['output'] == 'ready'):
+				result = True
+				break
+			elif(STATUS['output'] == 'failed'):
+				msg = "SliverStatus reports our slivers at "+AM_URN+" failed"
+				result = False
+				break
+			else:
+				msg = "Slivers at "+AM_URN+"  not ready yet. Will try again in 15s\n"
+			       	write_to_log(msg,printtoscreen)
+				tries = tries + 1
+				time.sleep(15)
+
+		else:
+			msg = "Problem in finding SliverStatus of your slivers at "+AM_URN
+			result = False
+			break
+
+	return msg,result
+
+def addGDAccesstoSlivers(slice_crypt,user_crypt,AM_URN):
+
+	msg = ''
+	result = True
+	done_once = False
+	global dontprinttoscreen
+	global printtoscreen
+
+
+	isGDAccessEnabled_JSON = addGDAccess(slice_crypt,user_crypt,AM_URN)
+	write_to_log(str(isGDAccessEnabled_JSON),dontprinttoscreen)
+	try:
+		isGDAccessEnabled = json.loads(isGDAccessEnabled_JSON)
+		if(isGDAccessEnabled['code'] == 0):
+			if(isGDAccessEnabled['output']):
+				if(isGDAccessEnabled['output']['just_added']):
+					msg = "GeniDesktop Tool access was just added to your slivers at "+AM_URN+".\nWaiting for the slivers to become ready again\n"
+				       	write_to_log(msg,printtoscreen)
+					(msg,result) = findSliverStatus(slice_crypt,user_crypt,AM_URN)
+				       	write_to_log(msg,printtoscreen)
+				else:
+					msg = "GeniDesktop Tool already had access to your slivers at "+AM_URN+".\n"
+				       	write_to_log(msg,printtoscreen)
+					#dont need to do sliverstatus here
+		else:
+			msg = "Problem adding GDkeys to slivers at "+AM_URN
+			result = False
+
+	except ValueError:
+		msg ="isGDAccessEnabled JSON Loading Error"
+		write_to_log(msg,printtoscreen)
+		result = False
+
+	return msg,result

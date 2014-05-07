@@ -61,6 +61,17 @@ def Usage():
 
 def opStatusProcess(GN_Node,MP_Nodes,queue):
 	global pKey
+	global slice_crypt
+	global user_crypt
+
+	# Check if GD has access to these nodes
+	# this will also add access automatically if it does not and let us know 
+	msg = "Check if GeniDesktop Tool has access to your slivers (and add if needed) at "+GN_Node['gemini_urn_to_monitor']
+       	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+	(msg,result) = gemini_util.addGDAccesstoSlivers(slice_crypt,user_crypt,GN_Node['gemini_urn_to_monitor'])
+	if(not result):
+		queue.put(msg)
+		sys.exit(1)
 
 	# extensive check performed once on all nodes 
 	# split process by filtering nodes based on CM URN
