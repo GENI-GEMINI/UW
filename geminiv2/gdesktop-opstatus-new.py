@@ -155,12 +155,12 @@ def main(argv=None):
 			keyfile = (args.pkey).replace('~',expanduser("~"),1)
 		else:
 			keyfile = args.pkey
-	if(not (keyfile != '' and os.path.isfile(keyfile))):
-		print "Please provide a valid private key file"
-		parser.print_help()
-		sys.exit(1)
-	else:
-		SSH_pkey = gemini_util.getPkey(keyfile,"SSH key")
+		if(not (keyfile != '' and os.path.isfile(keyfile))):
+			print "Please provide a valid private key file"
+			parser.print_help()
+			sys.exit(1)
+		else:
+			SSH_pkey = gemini_util.getPkey(keyfile,"SSH key")
 
 	if (LOGFILE is None):
 		print "Please provide a slicename"

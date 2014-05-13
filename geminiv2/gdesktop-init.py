@@ -31,7 +31,7 @@ import argparse
 import gemini_util	# Import user defined routines
 from os.path import expanduser
 
-def InitProcess(my_manager,pruned_GN_Nodes,pruned_MP_Nodes,USERURN,email_id,user_password_for_drupal,SLICEURN,dpadmin_username,dpadmin_passwd,slice_crypt,pKey,user_public_key):
+def InitProcess(my_manager,pruned_GN_Nodes,pruned_MP_Nodes,USERURN,email_id,user_password_for_drupal,SLICEURN,dpadmin_username,dpadmin_passwd,slice_crypt,pKey):
 
 	# STEP 1: Check nodes for OS Compatibilty
 	msg = "Checking if Nodes at AM --> "+my_manager+" for \n"+"1. Check if Global Node Present\n2. Find Nodes to be monitored by GEMINI\n3. OS Compatibility of selected Nodes"
@@ -70,7 +70,7 @@ def InitProcess(my_manager,pruned_GN_Nodes,pruned_MP_Nodes,USERURN,email_id,user
 	# STEP 2 : Download Passive measurement scripts and start ssh-key generator on the GN
 	# STEP 2b : Save MC public key onto a file pn GN, fetch it from the GN and place it on all MP Nodes
 	# STEP 3 : Install Shell in a box on all nodes and generate the Shellinabox config
-	(result,msg) = gemini_util.install_keys_plus_shell_in_a_box(pruned_GN_Nodes[0],pruned_MP_Nodes,user_public_key,pKey)
+	(result,msg) = gemini_util.install_keys_plus_shell_in_a_box(pruned_GN_Nodes[0],pruned_MP_Nodes,pKey)
 	if(result):
 		msg = "All nodes at AM --> "+my_manager+" have been Initialized."
 		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
@@ -161,12 +161,12 @@ def main(argv=None):
 			keyfile = (args.pkey).replace('~',expanduser("~"),1)
 		else:
 			keyfile = args.pkey
-	if(not (keyfile != '' and os.path.isfile(keyfile))):
-		print "Please provide a valid private key file"
-		parser.print_help()
-		sys.exit(1)
-	else:
-		SSH_pkey = gemini_util.getPkey(keyfile,"SSH key")
+		if(not (keyfile != '' and os.path.isfile(keyfile))):
+			print "Please provide a valid private key file"
+			parser.print_help()
+			sys.exit(1)
+		else:
+			SSH_pkey = gemini_util.getPkey(keyfile,"SSH key")
 
 	if (LOGFILE is None):
 		print "Please provide a slicename"
@@ -198,7 +198,6 @@ def main(argv=None):
 	USERURN = UserInfo['userurn']
 	user_crypt = UserInfo['user_crypt']
 	framework = UserInfo['framework']
-	user_public_key = UserInfo['public_key']
 
 	for  SliceInfo in Slices:
 		(junk,slicename_from_parser) = SliceInfo['sliceurn'].rsplit('+',1)
@@ -289,7 +288,7 @@ def main(argv=None):
 
 		pruned_MP_Nodes = gemini_util.pruneNodes(MP_Nodes,my_manager,'')
 
-		p = multiprocessing.Process(target=InitProcess,args=(my_manager,pruned_GN_Nodes,pruned_MP_Nodes,USERURN,email_id,user_password_for_drupal,SLICEURN,dpadmin_username,dpadmin_passwd,slice_crypt,pKey,user_public_key,))
+		p = multiprocessing.Process(target=InitProcess,args=(my_manager,pruned_GN_Nodes,pruned_MP_Nodes,USERURN,email_id,user_password_for_drupal,SLICEURN,dpadmin_username,dpadmin_passwd,slice_crypt,pKey,))
 		proclist.append(p)
 		p.start()                                                                                                                      
 
