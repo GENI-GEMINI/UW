@@ -1620,13 +1620,21 @@ def run_remote(ssh, cmd,pty=False,check_exit_status=True, verbose=True):
 
     return result
 
-def getLOGBASE(slicename):
-	LOGBASE = '/var/log/gemini/'+slicename
+def getLOGBASE(sliceurn):
+
+	project = 'no_project'
+	if (isValidURN(sliceurn,'slice')):
+		(newproject,slicename) = getSlicename_N_Project(sliceurn)
+		if(newproject != ''):
+			project = newproject
+	else:
+		slicename = sliceurn
+	LOGBASE = '/var/log/gemini/'+project+'/'+slicename
 	try:
 		if not os.path.exists(LOGBASE):
 			os.makedirs(LOGBASE)
 	except OSError:
-		LOGBASE = 'logs/'+slicename
+		LOGBASE = 'logs/'+project+'/'+slicename
 		print "Using Alternate Log Base"
 	return LOGBASE
 
@@ -2011,15 +2019,41 @@ def getMyExpInfo(CERT_ISSUER,username,cert_string,project,force_refresh,AMURNS):
 	return (UserOBJ['output'],SliceOBJ['output'],NodesOBJ['output'])
 
 
-def isValidURNs(urnlist):
+def isValidURN(urn,stype):
+
+	try:
+		(head,domain_n_other,type,name) = urn.split('+')
+	except ValueError:
+		return False
+
+	if(head != 'urn:publicid:IDN'):
+		return False
+	if(stype != type):
+		return False
+	if(stype == 'authority'):
+		if(name != 'am' and name != 'cm' and name != 'sa'):
+			return False
+	return True
+
+def isValidAMURNs(urnlist):
 
 	reason = ''
 	urns = urnlist.split(',')
 	for urn in urns:
-		plus_splits = urn.split('+')
-		if (len(plus_splits) != 4 or plus_splits[0] != 'urn:publicid:IDN' or plus_splits[2] != 'authority' or (plus_splits[3] != 'am' and plus_splits[3] != 'cm' and plus_splits[3] != 'sa')):
+		if(not isValidURN(urn,'authority')):
 			return False
+
 	return True
+
+def getSlicename_N_Project(sliceurn):
+
+	project = ''
+	(head,domain_n_other,type,name) = sliceurn.split('+')
+	details = domain_n_other.split(':')
+	if(len(details) > 1):
+		project = details[1]
+	return (project,name)
+
 
 def findSliverStatus(slice_crypt,user_crypt,AM_URN):
 	state = ''
