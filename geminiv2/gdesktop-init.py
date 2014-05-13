@@ -214,7 +214,6 @@ if(not (keyfile != '' and os.path.isfile(keyfile))):
 else:
 	pKey = SSH_pkey
 
-
 (UserInfo,Slices,Nodes) = gemini_util.getMyExpInfo(CERT_ISSUER,username,cf.read(),project,force_refresh,AMURNS)
 cf.close()
 username = UserInfo['uid']

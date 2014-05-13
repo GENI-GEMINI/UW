@@ -117,6 +117,8 @@ GN_IRODS_CERT   = BASE_CERT_DIR+'/irods-proxy.pem'
 GN_UNIS_CERT    = BASE_CERT_DIR+'/unis-proxy.pem'
 MP_PROXY_CERT   = BASE_CERT_DIR+'/mp_cert.pem'
 MP_PROXY_KEY    = BASE_CERT_DIR+'/mp_key.pem'
+UNIS_NUM_RETRIES     = 4
+UNIS_RETRY_WAIT_TIME = 3 # seconds
 
 ## unfortunately OpenSSL.SSL doesn't implement SSL.makefile() needed by httplib.HTTPResponse
 ## Python 3.3+ is working to fix this and also has password support in ssl.wrap_socket
@@ -1340,30 +1342,33 @@ def getUNISTopo(key,cert,endpoint):
 	return topo
 	
 #POST some data to specified UNIS endpoints
-def postDataToUNIS(key,cert,endpoint,data):
+def postDataToUNIS(key,cert,endpoint,data,retries=UNIS_NUM_RETRIES,wait=UNIS_RETRY_WAIT_TIME):
 	url = UNIS_URL+endpoint
 	o = urlparse.urlparse(url)
-
-	try:
-		conn = httplib.HTTPSConnection(o.hostname, o.port, key, cert)
-		conn.request("POST", o.path, data)
-	except Exception as e:
-		msg = "Could not connect to UNIS: %s" % e
-		write_to_log(msg,printtoscreen)
-		return None
-	try:
-		r = conn.getresponse()
-	except Exception as e:
-		msg = "Could not get Connection response from UNIS: %s" % e
-		write_to_log(msg,printtoscreen)
-		return None
-	data = r.read()
-	if r.status not in (200, 201):
-		write_to_log("POST to UNIS at "+url,printtoscreen)
-		write_to_log(data,printtoscreen)
-		return None
-	else:
-		return data
+	while retries:
+		try:
+			conn = httplib.HTTPSConnection(o.hostname, o.port, key, cert)
+			conn.request("POST", o.path, data)
+		except Exception as e:
+			msg = "Could not connect to UNIS (retries=%d): %s" % (retries, e)
+			write_to_log(msg,printtoscreen)
+			pass
+		try:
+			r = conn.getresponse()
+		except Exception as e:
+			msg = "Could not get Connection response from UNIS (retries=%d): %s" % (retries, e)
+			write_to_log(msg,printtoscreen)
+			pass
+		data = r.read()
+		if r.status not in (200, 201):
+			write_to_log("POST to UNIS at "+url,printtoscreen)
+			write_to_log(data,printtoscreen)
+			pass
+		else:
+			return data
+		--retries
+		sleep(wait)
+	return None
 
 #Register this Slice and its manifests to UNIS from GeniDesktop Parser
 def register_experiment_with_UNIS(slice_crypt,user_crypt):

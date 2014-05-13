@@ -348,7 +348,8 @@ if(not gemini_util.DISABLE_ACTIVE):
 		td = expiration - now
 		slice_lifetime = int(td.seconds + td.days * 24 * 3600)
 		validity = datetime.timedelta(seconds=slice_lifetime)
-		slice_lifetime = validity.days + 1
+		# adding 30 days lifetime to avoid GEMINI proxy cert expiration for most experimenters
+		slice_lifetime = validity.days + 30
 		#Now setup a proxy cert for the instrumentize script so we can talk to UNIS without keypass
 		gemini_util.makeInstrumentizeProxy(slice_lifetime,slice_uuid)
 		if not (gemini_util.PROXY_ATTR):
