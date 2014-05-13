@@ -199,7 +199,7 @@ def main(argv=None):
 	user_crypt = UserInfo['user_crypt']
 	framework = UserInfo['framework']
 	user_public_key = UserInfo['public_key']
-	
+
 	for  SliceInfo in Slices:
 		(junk,slicename_from_parser) = SliceInfo['sliceurn'].rsplit('+',1)
 		if (gemini_util.SLICENAME == slicename_from_parser):
