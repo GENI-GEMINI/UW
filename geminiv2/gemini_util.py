@@ -2077,7 +2077,7 @@ def findSliverStatus(slice_crypt,user_crypt,AM_URN):
 			msg = "Problem in finding SliverStatus of your slivers at "+AM_URN
 			result = False
 			break
-	if(tries == 40 and not(result):
+	if(tries == 40 and not(result)):
 		msg = "Slivers at "+AM_URN+"  not ready even after 10 minutes. Giving up on it."
 
 	return msg,result,details
