@@ -1504,7 +1504,7 @@ def sshConnection(hostname,port,username,pkey_object,what_to_do,cmd=None,localFi
 	allow_agent=False
 	look_for_keys=False
 	compress=True
-	ssh_timeout = 60.0
+	ssh_timeout = 5.0
 	ssh = paramiko.SSHClient()
 	ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 	tries = 0 	
@@ -2077,6 +2077,8 @@ def findSliverStatus(slice_crypt,user_crypt,AM_URN):
 			msg = "Problem in finding SliverStatus of your slivers at "+AM_URN
 			result = False
 			break
+	if(tries == 40 and not(result):
+		msg = "Slivers at "+AM_URN+"  not ready even after 10 minutes. Giving up on it."
 
 	return msg,result,details
 
