@@ -2099,9 +2099,10 @@ def addGDAccesstoSlivers(slice_crypt,user_crypt,AM_URN):
 			if(isGDAccessEnabled['output']):
 				if(isGDAccessEnabled['output']['just_added']):
 					msg = "GeniDesktop Tool access was just added to your slivers at "+AM_URN+".\nWaiting for the slivers to become ready again\n"
-				       	write_to_log(msg,printtoscreen)
+					time.sleep(60)
+					write_to_log(msg,printtoscreen)
 					(msg,result,junk) = findSliverStatus(slice_crypt,user_crypt,AM_URN)
-				       	write_to_log(msg,printtoscreen)
+					write_to_log(msg,printtoscreen)
 				else:
 					msg = "GeniDesktop Tool already had access to your slivers at "+AM_URN+".\n"
 				       	write_to_log(msg,printtoscreen)
