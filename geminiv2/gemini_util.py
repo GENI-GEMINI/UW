@@ -92,7 +92,7 @@ printtoscreen=1
 dontprinttoscreen=0
 SSH_pKey = None
 CERT_pKey = None
-SLICENAME = None
+SLICEURN = None
 project = None
 cache_expiry = 60 * 10 # 10 minutes
 try:
@@ -1634,8 +1634,14 @@ def getCert_issuer_n_username():
 	(junk,domain,type,username) = USER_URN.split('+')
 	return (domain.replace('.','_')).replace(':','_'),username
 	
-def getCacheFilename(CERT_ISSUER,username,SLICENAME,api_call):
-	return '/tmp/.gemini/'+CERT_ISSUER+'-'+username+'-'+api_call+'-'+SLICENAME+'.json'
+def getCacheFilename(CERT_ISSUER,username,SLICEURN,api_call):
+	project = ''
+	if(SLICEURN == ''):
+		return '/tmp/.gemini/'+CERT_ISSUER+'-'+username+'-'+api_call+'-'+'.json'
+
+	else:
+		(project,SLICENAME) = getSlicename_N_Project(SLICEURN)
+		return '/tmp/.gemini/'+CERT_ISSUER+'-'+username+'-'+api_call+'-'+project+'_'+SLICENAME+'.json'
 
 #
 # Modified version of do_method from Utah 
@@ -1813,13 +1819,13 @@ def detailedProbeComplete(Node,pKey,use_sudo):
 	return True
 
 def fetchFromCache(CERT_ISSUER,username,api_call):
-	global SLICENAME
+	global SLICEURN
 	global cache_expiry
 
 	if(api_call == 'getuserinfo'):
 		FILE = getCacheFilename(CERT_ISSUER,username,'',api_call)
 	else:	
-		FILE = getCacheFilename(CERT_ISSUER,username,SLICENAME,api_call)
+		FILE = getCacheFilename(CERT_ISSUER,username,SLICEURN,api_call)
 	if(not os.path.isfile(FILE)):
 		return ''
 	elif((time.time() - os.stat(FILE)[8] ) > cache_expiry): # Assumes that if cache file is older than 15 minutes dont use it.
@@ -1834,11 +1840,11 @@ def fetchFromCache(CERT_ISSUER,username,api_call):
 
 
 def writeToCache(CERT_ISSUER,username,api_call,json):
-	global SLICENAME
+	global SLICEURN
 	if(api_call == 'getuserinfo'):
 		FILE = getCacheFilename(CERT_ISSUER,username,'',api_call)
 	else:	
-		FILE = getCacheFilename(CERT_ISSUER,username,SLICENAME,api_call)
+		FILE = getCacheFilename(CERT_ISSUER,username,SLICEURN,api_call)
 	ensure_dir(FILE)
 	f = open(FILE, 'w')
 	f.write(json)
@@ -1847,8 +1853,8 @@ def writeToCache(CERT_ISSUER,username,api_call,json):
 	return
 
 
-def getMyExpInfo(CERT_ISSUER,username,cert_string,project,force_refresh,AMURNS):
-	global SLICENAME
+def getMyExpInfo(CERT_ISSUER,username,cert_string,force_refresh,AMURNS):
+	global SLICEURN
 	global passphrase
 
 	UserJSON = ''
@@ -1893,7 +1899,6 @@ def getMyExpInfo(CERT_ISSUER,username,cert_string,project,force_refresh,AMURNS):
 	msg = "Found User Info for "+USERURN
 	write_to_log(msg,printtoscreen)
 
-	my_sliceurn = getSliceURN(framework,USERURN,SLICENAME,project)
 	if(force_refresh):
 		cachedSliceJSON = ''
 	else:
@@ -1906,7 +1911,7 @@ def getMyExpInfo(CERT_ISSUER,username,cert_string,project,force_refresh,AMURNS):
 	else:
 		msg = "Fetching Slice Info from the GeniDesktop Parser"
 		write_to_log(msg,printtoscreen)
-		SliceJSON = getSliceinfoFromParser(user_crypt,my_sliceurn)
+		SliceJSON = getSliceinfoFromParser(user_crypt,SLICEURN)
 	try:
 		SliceOBJ = json.loads(SliceJSON)
 		if(cachedSliceJSON == ''):
@@ -1929,14 +1934,12 @@ def getMyExpInfo(CERT_ISSUER,username,cert_string,project,force_refresh,AMURNS):
 
 	Slices = SliceOBJ['output']
 	for  SliceInfo in Slices:
-		(junk,slicename_from_parser) = SliceInfo['sliceurn'].rsplit('+',1)
-		if (SLICENAME == slicename_from_parser):
-			SLICEURN =  SliceInfo['sliceurn']
+		if (SLICEURN == SliceInfo['sliceurn']):
 			found = True
 			break
 
 	if(not found):
-		msg = "Slice : "+SLICENAME+' does not exists'
+		msg = "Slice : "+SLICEURN+' does not exists'
 		write_to_log(msg,printtoscreen)
 		sys.exit(1)
 

@@ -43,7 +43,6 @@ keyfile = ""
 force_refresh = False
 FILE = ''
 DONE=0
-SLICEURN = ''
 AMURNS = ''
 def main(argv=None):
 
@@ -57,7 +56,6 @@ def main(argv=None):
 	keyfile = ""
 	force_refresh = False
 	FILE = ''
-	SLICEURN = ''
 	AMURNS = ''
 	DONE=0
 
@@ -75,7 +73,6 @@ def main(argv=None):
 	args = parser.parse_args()
 
 	LOGFILE = None
-	project = None
 
 	if (args.debug):
 		gemini_util.debug = True
@@ -102,13 +99,12 @@ def main(argv=None):
 		else:
 			gemini_util.CERTIFICATE = args.certificate
 
-	SLICEURN = args.sliceurn
-	if (not gemini_util.isValidURN(SLICEURN,'slice')):
+	gemini_util.SLICEURN = args.sliceurn
+	if (not gemini_util.isValidURN(gemini_util.SLICEURN,'slice')):
 		print "Not a valid SliceURN"
 		parser.print_help()
 		sys.exit(1)
-	(project,gemini_util.SLICENAME) = gemini_util.getSlicename_N_Project(SLICEURN)
-	mylogbase = gemini_util.getLOGBASE(SLICEURN)
+	mylogbase = gemini_util.getLOGBASE(gemini_util.SLICEURN)
 	LOCALTIME = time.strftime("%Y%m%dT%H:%M:%S",time.localtime(time.time()))
 	LOGFILE = mylogbase+"/"+os.path.basename(__file__)+"-"+LOCALTIME+".log"
 	gemini_util.ensure_dir(LOGFILE)
@@ -153,7 +149,7 @@ def main(argv=None):
 	else:
 		pKey = SSH_pkey
 
-	(UserInfo,Slices,Nodes) = gemini_util.getMyExpInfo(CERT_ISSUER,username,cf.read(),project,force_refresh,AMURNS)
+	(UserInfo,Slices,Nodes) = gemini_util.getMyExpInfo(CERT_ISSUER,username,cf.read(),force_refresh,AMURNS)
 	cf.close()
 	username = UserInfo['uid']
 	email_id = UserInfo['email']
@@ -163,17 +159,16 @@ def main(argv=None):
 	
 	for  SliceInfo in Slices:
 		(junk,slicename_from_parser) = SliceInfo['sliceurn'].rsplit('+',1)
-		if (gemini_util.SLICENAME == slicename_from_parser):
-			SLICEURN =  SliceInfo['sliceurn']
+		if (gemini_util.SLICEURN == SliceInfo['sliceurn']):
 			found = True
 			break
 
 	if(not found):
-		msg = "Slice : "+gemini_util.SLICENAME+' does not exists'
+		msg = "Slice : "+gemini_util.SLICEURN+' does not exists'
 		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 		sys.exit(1)
 
-	msg = "Found Slice Info for "+SLICEURN
+	msg = "Found Slice Info for "+gemini_util.SLICEURN
 	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 	slice_crypt = SliceInfo['crypt']
 	expiry = SliceInfo['expires']
