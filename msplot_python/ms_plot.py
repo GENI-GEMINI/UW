@@ -1,6 +1,6 @@
 '''
 Usage:
-  ms_plot <query-url>
+  ms_plot <metadata-url> [--limit=<N>] [--cert=<file>]
 
 '''
 
@@ -9,6 +9,8 @@ import requests
 import matplotlib
 from consts import ET_TO_YLABEL, ET_TO_TRANS
 from datetime import datetime
+
+# http://matplotlib.org/
 matplotlib.use('GTKAgg') # do this before importing pylab
 import matplotlib.pyplot as plt
 import time
@@ -26,16 +28,44 @@ mds = []
 data = {}
 axes = {}
 AXES = {}
+ms_url = None
 cert_key = None
+limit = 100
 fig = setup_figure(plt.figure())
 YTICKNUM = 6
 XTICKNUM = 4
+
 def main(arguments):
-    r = requests.get(arguments['<query-url>'], cert=cert_key, verify=False)
-    tss = [ x["ts"] for x in r.json() ]
-    vals = [ x["value"] for x in r.json() ]
-    plt.plot(tss, vals)
-    plt.show()
+    global cert_key
+    global mds
+    global limit
+    global ms_url
+
+    if arguments['--limit']:
+        limit = arguments['--limit']
+
+    if arguments['--cert']:
+        cert_key = arguments['--cert']
+
+    r = None
+    try:
+        r = requests.get(arguments['<metadata-url>'], cert=cert_key, verify=False)
+    except Exception as e:
+        print "Could not retrieve metadata: %s" % e
+        exit(1)
+    
+    if r:
+        # can push any number of metadata object into mds array
+        # to plot them all at once
+        mds = [r.json()]
+        meas_url = mds[0]["parameters"]["measurement"]["href"]
+        m = requests.get(meas_url, cert=cert_key, verify=False)
+        meas = m.json()
+        ms_url = meas["configuration"]["ms_url"]
+        plot_all()
+    else:
+        print "No data returned"
+        exit(1)
 
 def plot_all():
     global mds
@@ -46,10 +76,10 @@ def plot_all():
     for md in mds:
         data[md["id"]] = {}
         plotnum += 1
-        tss, vals = get_data(md, "?limit=10")
+        tss, vals = get_data(md, "?limit="+str(limit))
         vals = map(ET_TO_TRANS[md["eventType"]], vals)
         xticks = get_ticks(tss, XTICKNUM)
-        ax = fig.add_subplot(numrows, 2, plotnum,
+        ax = fig.add_subplot(numrows, 1, plotnum,
                              xticklabels = get_ts_labels(xticks),
                              xticks=xticks,
                              ylabel = ET_TO_YLABEL[md["eventType"]])
@@ -63,33 +93,31 @@ def plot_all():
         td["vals"] = vals
         ax.set_title(':'.join(md["eventType"].split(':')[-3:]))
     import gobject
-    gobject.idle_add(animate)
+    gobject.timeout_add(2000, animate)
     plt.show()
 
 
 def animate():
     plotnum = 0
-    while True:
-        time.sleep(1)
-        for md in mds:
-            plotnum += 1
-            td = data[md["id"]]
-            tss = td["tss"]
-            vals = td["vals"]
-            xtraq = "?ts=gt=%d"%(int(tss[-1]))
-            newtss, newvals = get_data(md, xtraq)
-            newvals = map(ET_TO_TRANS[md["eventType"]], newvals)
-            tss.extend(newtss)
-            vals.extend(newvals)
-            ax = AXES[md["id"]]
-            xticks = get_ticks(tss, XTICKNUM)
-            ax.set_xticks(xticks)
-            ax.set_xticklabels(get_ts_labels(xticks))
-            ax.plot(tss, vals, '-bo')
-        fig.canvas.draw()
+    for md in mds:
+        plotnum += 1
+        td = data[md["id"]]
+        tss = td["tss"]
+        vals = td["vals"]
+        xtraq = "?ts=gt=%d"%(int(tss[-1]))
+        newtss, newvals = get_data(md, xtraq)
+        newvals = map(ET_TO_TRANS[md["eventType"]], newvals)
+        tss.extend(newtss)
+        vals.extend(newvals)
+        ax = AXES[md["id"]]
+        xticks = get_ticks(tss, XTICKNUM)
+        ax.set_xticks(xticks)
+        ax.set_xticklabels(get_ts_labels(xticks))
+        ax.plot(tss, vals, '-bo')
+    fig.canvas.draw()
+    return True
 
 def get_data(metadata, xtraq=""):
-    ms_url = metadata["parameters"]["config"]["ms_url"]
     r = requests.get(ms_url + "/data/" + metadata["id"] + xtraq, cert=cert_key, verify=False)
     return extract_data(r)
 

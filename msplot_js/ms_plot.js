@@ -1,7 +1,7 @@
 var UNIS_URL = "http://localhost:8888";
 var MS_URL = "http://localhost:8888";
-var MD_QUERY = "/metadata?subject.href=http://localhost:8888/nodes/519b8fd6164ed872c827ea4d";
-var INITIAL_DATA_QUERY = "";
+var MD_QUERY = "/metadata?subject.href=http://localhost:8888/nodes/51b5e3bb37908438dd1ac0de";
+var INITIAL_DATA_QUERY = "?limit=50";
 var UPDATE_INTERVAL = 2000; //query every update_interval in ms
 mdids = {};
 function fill_mdids(data){
@@ -37,7 +37,7 @@ function plot_id(idd) {
 	console.log("empty");
 	return
     }
-    $('body').append("<div id=\""+idd+"\" style=\"height:400px;width:1600px; \"></div>");
+    $('body').append("<div id=\""+idd+"\" style=\"height:300px;width:800px; \"></div>");
     mdids[idd]["plot"] = $.jqplot(idd,
 				  [mdids[idd]["data_pairs"]],
 				  mdids[idd]["options"]);
