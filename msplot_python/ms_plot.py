@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 '''
 Usage:
   ms_plot <metadata-url> [--limit=<N>] [--cert=<file>]
