@@ -66,8 +66,8 @@ def main(argv=None):
 	parser.add_argument('-n','--sliceurn',help='Slice URN of the Slice',required=True)
 	parser.add_argument('-a','--amurns',help='Comma seperated list of AM URNs where the user has slivers for this slice')
 	parser.add_argument('-k','--pkey',help='Your private SSH RSA Key file')
+	parser.add_argument('-s','--speaksforcred',help='Read Speaks for credential from file')
 	parser.add_argument('-f','--certificate',help='Read SSL certificate from file',required=True)
-	parser.add_argument('-p','--passphrase',help='Read passphrase for certificate from file')
 	
 
 	args = parser.parse_args()
@@ -93,11 +93,33 @@ def main(argv=None):
 			parser.print_help()
 			sys.exit(1)
 	
+
+	if(args.speaksforcred):
+		print "Using Speaks for Credentials from the GeniDesktop"
+		speaks_for_cred_file = args.speaksforcred
+		#get Cert from this credential
+		try:
+			cf = open(speaks_for_cred_file,'r')
+		except:
+			msg = "Error opening Speaks for Credential File"
+			gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+			sys.exit(1)
+		CERTIFICATE_string = gemini_util.getCertFromCredfile(speaks_for_cred_file)
+		if(CERTIFICATE_string == ''):
+			msg = "Missing Certificate in the Speaks for Credential"
+			gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+			sys.exit(1)
+#		else:
+#			f = tempfile.NamedTemporaryFile(delete=False)
+#			f.write(CERTIFICATE_string)
+#			gemini_util.CERTIFICATE = f.name
 	if(args.certificate):
 		if ((args.certificate).startswith('~')):
 			gemini_util.CERTIFICATE = (args.certificate).replace('~',expanduser("~"),1)
 		else:
 			gemini_util.CERTIFICATE = args.certificate
+
+
 
 	gemini_util.SLICEURN = args.sliceurn
 	if (not gemini_util.isValidURN(gemini_util.SLICEURN,'slice')):
@@ -110,11 +132,6 @@ def main(argv=None):
 	gemini_util.ensure_dir(LOGFILE)
 	gemini_util.openLogPIPE(LOGFILE)
 
-	if (args.passphrase):
-		if((args.passphrase).startswith('~')):
-			gemini_util.PASSPHRASEFILE = (args.passphrase).replace('~',expanduser("~"),1)
-		else:
-			gemini_util.PASSPHRASEFILE = args.passphrase
 	if (args.pkey):
 		if((args.pkey).startswith('~')):
 			keyfile = (args.pkey).replace('~',expanduser("~"),1)
@@ -132,22 +149,9 @@ def main(argv=None):
 		parser.print_help()
 		sys.exit(1)
 	
-	try:
-		cf = open(gemini_util.CERTIFICATE,'r')
-	except:
-		msg = "Error opening Certificate"
-		gemini_util.write_to_log(LOGFILE,msg,gemini_util.printtoscreen,debug)
-		sys.exit(1)
 
-	# Check if passphrase provided is valid
-	# If passphrase is not provided prompt for it.
-	CERT_pkey = gemini_util.getPkey(gemini_util.CERTIFICATE,"certificate")
-	(CERT_ISSUER,username) = gemini_util.getCert_issuer_n_username()
-
-	if(not (keyfile != '' and os.path.isfile(keyfile))):
-		pKey = CERT_pkey
-	else:
-		pKey = SSH_pkey
+	(CERT_ISSUER,username) = gemini_util.getCert_issuer_n_username(CERTIFICATE_string)
+	pKey = SSH_pkey
 
 	(UserInfo,Slices,Nodes) = gemini_util.getMyExpInfo(CERT_ISSUER,username,cf.read(),force_refresh,AMURNS)
 	cf.close()
@@ -227,9 +231,9 @@ def main(argv=None):
 		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 		sys.exit(1)
 
-	msg = "Registering Slice with UNIS and posting Manifests to UNIS"
+	msg = "Registering Slice Credential with UNIS"
 	gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-	REGUNISJSON = gemini_util.register_experiment_with_UNIS(slice_crypt,user_crypt)
+	REGUNISJSON = gemini_util.register_experiment_with_UNIS(slice_crypt,user_crypt,'register')
 	try:
 		REGUNISOBJ = json.loads(REGUNISJSON)
 		gemini_util.write_to_log(REGUNISJSON,gemini_util.dontprinttoscreen)
@@ -243,9 +247,7 @@ def main(argv=None):
 		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 		msg = "Active Services will be disabled to continue with the Instrumentation process"
 		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-		gemini_util.DISABLE_ACTIVE = True
-
-
+		sys.exit(1)
 
 	slice_lifetime = {}
 	if (slice_uuid):
@@ -262,7 +264,47 @@ def main(argv=None):
 			gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 			msg = "Active Services will be disabled to continue with the Instrumentation process"
 			gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-			gemini_util.DISABLE_ACTIVE = True
+			sys.exit(1)
+
+		#Send the proxy cert to UNIS so we can use this identity to query UNIS later
+		msg = "Trying to register the UNIS Tool Proxy cert as Slice Admin"
+		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+		f = open(gemini_util.PROXY_ATTR)
+		res = gemini_util.postDataToUNIS(gemini_util.PROXY_KEY,gemini_util.PROXY_CERT,"/credentials/geniuser",f)
+		f.close()
+		os.remove(gemini_util.PROXY_ATTR)
+		if res is None:
+			msg="Failed to register instrumentize proxy cert"
+			gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+			msg = "Active Services will be disabled to continue with the Instrumentation process"
+			gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+			sys.exit(1)
+		else:
+			msg = "Sucessfully registered the UNIS Tool Proxy cert as Slice Admin\n\nTrying to Post Manifests to UNIS"
+			gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+			content1 = ''
+			content2 = ''
+			with open(gemini_util.PROXY_KEY,'r') as content_file:
+				content1 = content_file.read()
+    			with open(gemini_util.PROXY_CERT,'r') as content_file:
+    				content2 = content_file.read()	
+			REGUNISJSON = gemini_util.register_experiment_with_UNIS(slice_crypt,user_crypt,'postmanifest',content1+"\n"+content2)
+			try:
+				REGUNISOBJ = json.loads(REGUNISJSON)
+				gemini_util.write_to_log(REGUNISJSON,gemini_util.dontprinttoscreen)
+			except ValueError:
+				msg ="REGUNIS Info JSON Loading Error"
+				gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+				msg = "Active Services will be disabled to continue with the Instrumentation process"
+				gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+				sys.exit(1)
+
+			if (REGUNISOBJ['code'] != 0):
+				msg = "GeniDesktop Manifest-post to UNIS Error : "+ REGUNISOBJ['output']
+				gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+				msg = "Active Services will be disabled to continue with the Instrumentation process"
+				gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+				sys.exit(1)
 
 	else:
 		msg = "Could not get slice UUID from slice credential. GEMINI Services may fail."

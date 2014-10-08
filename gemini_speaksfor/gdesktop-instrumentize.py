@@ -138,6 +138,7 @@ def main(argv=None):
 	parser.add_argument('-a','--amurns',help='Comma seperated list of AM URNs where the user has slivers for this slice')
 	parser.add_argument('-k','--pkey',help='Your private SSH RSA Key file')
 	parser.add_argument('-s','--speaksforcred',help='Read Speaks for credential from file')
+	parser.add_argument('-f','--certificate',help='Read User/UNIStool SSL certificate from file',required=True)
 	
 
 	args = parser.parse_args()
@@ -183,11 +184,15 @@ def main(argv=None):
 			msg = "Missing Certificate in the Speaks for Credential"
 			gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 			sys.exit(1)
+#		else:
+#			f = tempfile.NamedTemporaryFile(delete=False)
+#			f.write(CERTIFICATE_string)
+#			gemini_util.CERTIFICATE = f.name
+	if(args.certificate):
+		if ((args.certificate).startswith('~')):
+			gemini_util.CERTIFICATE = (args.certificate).replace('~',expanduser("~"),1)
 		else:
-			f = tempfile.NamedTemporaryFile(delete=False)
-			f.write(CERTIFICATE_string)
-			gemini_util.CERTIFICATE = f.name
-
+			gemini_util.CERTIFICATE = args.certificate
 
 	gemini_util.SLICEURN = args.sliceurn
 	if (not gemini_util.isValidURN(gemini_util.SLICEURN,'slice')):
@@ -303,16 +308,18 @@ def main(argv=None):
 		sys.exit(1)
 
 	if(not gemini_util.DISABLE_ACTIVE):
-		msg = "Registering Slice with UNIS and posting Manifests to UNIS"
+		msg = "Registering Slice Credential with UNIS"
 		gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-		REGUNISJSON = gemini_util.register_experiment_with_UNIS(slice_crypt,user_crypt)
+		REGUNISJSON = gemini_util.register_experiment_with_UNIS(slice_crypt,user_crypt,'register')
 		try:
 			REGUNISOBJ = json.loads(REGUNISJSON)
 			gemini_util.write_to_log(REGUNISJSON,gemini_util.dontprinttoscreen)
 		except ValueError:
 			msg ="REGUNIS Info JSON Loading Error"
 			gemini_util.write_to_log(msg,gemini_util.printtoscreen)
-			sys.exit(1)
+			msg = "Active Services will be disabled to continue with the Instrumentation process"
+			gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+			gemini_util.DISABLE_ACTIVE = True
 
 		if (REGUNISOBJ['code'] != 0):
 			msg = "GeniDesktop to UNIS registration Error : "+ REGUNISOBJ['output']
@@ -341,6 +348,8 @@ def main(argv=None):
 				gemini_util.DISABLE_ACTIVE = True
 
 			#Send the proxy cert to UNIS so we can use this identity to query UNIS later
+			msg = "Trying to register the UNIS Tool Proxy cert as Slice Admin"
+			gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 			f = open(gemini_util.PROXY_ATTR)
 			res = gemini_util.postDataToUNIS(gemini_util.PROXY_KEY,gemini_util.PROXY_CERT,"/credentials/geniuser",f)
 			f.close()
@@ -351,16 +360,39 @@ def main(argv=None):
 				msg = "Active Services will be disabled to continue with the Instrumentation process"
 				gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 				gemini_util.DISABLE_ACTIVE = True
-	
-	
+			else:
+				msg = "Sucessfully registered the UNIS Tool Proxy cert as Slice Admin\n\nTrying to Post Manifests to UNIS"
+				gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+				content1 = ''
+				content2 = ''
+				with open(gemini_util.PROXY_KEY,'r') as content_file:
+					content1 = content_file.read()
+    				with open(gemini_util.PROXY_CERT,'r') as content_file:
+    					content2 = content_file.read()	
+				REGUNISJSON = gemini_util.register_experiment_with_UNIS(slice_crypt,user_crypt,'postmanifest',content1+"\n"+content2)
+				try:
+					REGUNISOBJ = json.loads(REGUNISJSON)
+					gemini_util.write_to_log(REGUNISJSON,gemini_util.dontprinttoscreen)
+				except ValueError:
+					msg ="REGUNIS Info JSON Loading Error"
+					gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+					msg = "Active Services will be disabled to continue with the Instrumentation process"
+					gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+					gemini_util.DISABLE_ACTIVE = True
+
+				if (REGUNISOBJ['code'] != 0):
+					msg = "GeniDesktop Manifest-post to UNIS Error : "+ REGUNISOBJ['output']
+					gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+					msg = "Active Services will be disabled to continue with the Instrumentation process"
+					gemini_util.write_to_log(msg,gemini_util.printtoscreen)
+					gemini_util.DISABLE_ACTIVE = True
+				else:
+					(gn_ms_proxycert_file,gn_ms_proxykey_file,mp_blipp_proxycert_file,mp_blipp_proxykey_file) = gemini_util.generate_all_proxycerts(slice_lifetime,slice_uuid)
+
 		else:
 			msg = "Could not get slice UUID from slice credential. GEMINI Services may fail."
 			gemini_util.write_to_log(msg,gemini_util.printtoscreen)
 			sys.exit(1)
- 
-		(gn_ms_proxycert_file,gn_ms_proxykey_file,mp_blipp_proxycert_file,mp_blipp_proxykey_file) = gemini_util.generate_all_proxycerts(slice_lifetime,slice_uuid)
-
-
 
 	proclist = []
 	results = []
@@ -420,7 +452,7 @@ def main(argv=None):
 		if(result.empty()):
 			DONE = 1
 
-	gemini_util.delete_all_temp_proxyfiles(gemini_util.CERTIFICATE)
+	
 	if(not gemini_util.DISABLE_ACTIVE):
 		tmp_proxyfiles = [gemini_util.PROXY_CERT,gemini_util.PROXY_KEY,gn_ms_proxycert_file,gn_ms_proxykey_file,mp_blipp_proxycert_file,mp_blipp_proxykey_file]
 		status = gemini_util.delete_all_temp_proxyfiles(tmp_proxyfiles)

@@ -81,7 +81,7 @@ ARCHIVE_CMD_FILE=measure_scripts_path+"/archive_cmd.sh"
 version="0.3"
 devel_version="0.3"
 mc_repo_rooturl="http://gemini.netlab.uky.edu/"
-parser_rooturl="https://parser.netlab.uky.edu/wild/"
+parser_rooturl="https://parser.netlab.uky.edu/"
 UNIS_URL = "https://unis.incntre.iu.edu:8443"
 INSTOOLS_repo_url = mc_repo_rooturl+"GEMINI/"+version+"/"
 EXP_NODE_tmppath = "/tmp"
@@ -1340,22 +1340,25 @@ def postDataToUNIS(key,cert,endpoint,data,retries=UNIS_NUM_RETRIES,wait=UNIS_RET
 			msg = "Could not get Connection response from UNIS (retries=%d): %s" % (retries, e)
 			write_to_log(msg,printtoscreen)
 			pass
-		data = r.read()
-		if r.status not in (200, 201):
-			write_to_log("POST to UNIS at "+url,printtoscreen)
-			write_to_log(data,printtoscreen)
+		try:
+			data = r.read()
+			if r.status not in (200, 201):
+				write_to_log("POST to UNIS at "+url,printtoscreen)
+				write_to_log(data,printtoscreen)
+				pass
+			else:
+				return data
+		except UnboundLocalError as ue:
 			pass
-		else:
-			return data
 		--retries
-		sleep(wait)
+		time.sleep(wait)
 	return None
 
 #Register this Slice and its manifests to UNIS from GeniDesktop Parser
-def register_experiment_with_UNIS(slice_crypt,user_crypt):
+def register_experiment_with_UNIS(slice_crypt,user_crypt,action,ProxyCert = None):
 	global debug
 
-	post_data = urllib.urlencode({'slice_crypt':slice_crypt, 'user_crypt':user_crypt,'debug':debug})
+	post_data = urllib.urlencode({'slice_crypt':slice_crypt, 'user_crypt':user_crypt,'debug':debug,'action':action,'proxy_cert':ProxyCert})
 	url = parser_rooturl+'/reg_with_unis.php'
 	req = urllib2.Request(url,post_data)
 	post_response = urllib2.urlopen(req)
